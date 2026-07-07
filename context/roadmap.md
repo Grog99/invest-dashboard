@@ -20,11 +20,12 @@ Uporządkowana lista propozycji rozwoju invest-dashboardu — od drobnych uspraw
 - **Złożoność:** S
 - **Zależności:** brak; indeks `idx_news_published` już istnieje.
 
-### 1.3 Wykres świecowy OHLC jako opcja
+### 1.3 Wykres świecowy OHLC jako opcja ✅ ZROBIONE
 - **Opis:** Tabela `quotes_daily` już przechowuje `open/high/low/close/volume` — dane są gotowe. W `src/components/charts/PriceChart.tsx` (lightweight-charts v5, dziś `AreaSeries`) dodać przełącznik linia/świece (`CandlestickSeries` + opcjonalnie `HistogramSeries` dla wolumenu), obok istniejących zakresów 3M/1R/3L/MAX.
 - **Wartość:** Analiza techniczna na karcie spółki bez wychodzenia do zewnętrznych serwisów.
 - **Złożoność:** S
 - **Zależności:** brak — tylko frontend; trzeba przekazać pełne bary (dziś strona spółki może przekazywać tylko `date`+`close`).
+- **Status (zrealizowane):** Dodano `src/components/charts/CandleChart.tsx` (nowy kliencki komponent, `CandlestickSeries` + `HistogramSeries` wolumenu na osobnej skali, kolory `--color-pos`/`--color-neg`) oraz przełącznik trybu Linia/Świece w `PriceChart.tsx` (obok istniejącego przełącznika zakresu, ten sam styl przycisków). `src/app/companies/[id]/page.tsx` przekazuje teraz pełne bary OHLCV zamiast samego `close`. `AreaChart.tsx` (współdzielony z dashboardem) pozostał bez zmian; bary z `null` OHLC degradują do świecy na poziomie `close`.
 
 ### 1.4 Auto-odświeżanie notowań co N minut przy otwartej karcie
 - **Opis:** Kliencki hook (np. w `src/components/RefreshButtons.tsx` lub nowy `AutoRefresh.tsx` montowany w layoucie karty spółki/dashboardu): `setInterval` → `POST /api/quotes/refresh` z `{ companyIds: [id] }` (endpoint już przyjmuje listę id) → `router.refresh()`. Interwał konfigurowalny w tabeli `settings` (np. klucz `quotes_auto_refresh_minutes`, 0 = wyłączone); pauza gdy `document.hidden`.

@@ -65,7 +65,14 @@ export default async function CompanyPage({
   const fiveYearsAgo = new Date();
   fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
   const bars = db
-    .select({ date: quotesDaily.date, close: quotesDaily.close })
+    .select({
+      date: quotesDaily.date,
+      open: quotesDaily.open,
+      high: quotesDaily.high,
+      low: quotesDaily.low,
+      close: quotesDaily.close,
+      volume: quotesDaily.volume,
+    })
     .from(quotesDaily)
     .where(
       and(
@@ -189,7 +196,14 @@ export default async function CompanyPage({
       <div className="mt-4">
         <Card title={`Kurs ${company.ticker}`}>
           <PriceChart
-            data={bars.map((b) => ({ time: b.date, value: b.close }))}
+            data={bars.map((b) => ({
+              time: b.date,
+              open: b.open,
+              high: b.high,
+              low: b.low,
+              close: b.close,
+              volume: b.volume,
+            }))}
             currency={company.currency}
           />
         </Card>
