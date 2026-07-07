@@ -61,3 +61,18 @@ export function todayISO(): string {
 export function nowISO(): string {
   return new Date().toISOString();
 }
+
+// Klucz deduplikacji newsów: znormalizowany tytuł + dzień publikacji.
+// Współdzielony przez backfill (src/db/index.ts) i runtime (src/lib/news.ts),
+// żeby oba liczyły ten sam klucz dla tego samego artykułu (patrz ADR/plan
+// scalania duplikatów — SQL-owy lower() jest ASCII-only i rozjeżdża się
+// z JS toLowerCase() dla polskich wielkich liter).
+export function computeDedupKey(
+  title: string,
+  publishedAt: string | null
+): string | null {
+  const t = title.trim().toLowerCase();
+  const day = (publishedAt ?? "").slice(0, 10);
+  if (!t || day.length < 10) return null; // brak daty → nie deduplikujemy po kluczu, tylko po url
+  return `${t}|${day}`;
+}

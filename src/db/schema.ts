@@ -4,6 +4,7 @@ import {
   integer,
   real,
   primaryKey,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 // Spółki — zarówno posiadane (mają transakcje), jak i obserwowane (watchlist = 1).
@@ -96,18 +97,26 @@ export const newsSources = sqliteTable("news_sources", {
   lastError: text("last_error"),
 });
 
-export const newsItems = sqliteTable("news_items", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  sourceId: integer("source_id").references(() => newsSources.id, {
-    onDelete: "set null",
-  }),
-  title: text("title").notNull(),
-  url: text("url").notNull().unique(),
-  summary: text("summary"),
-  publishedAt: text("published_at"),
-  read: integer("read").notNull().default(0),
-  createdAt: text("created_at").notNull(),
-});
+export const newsItems = sqliteTable(
+  "news_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sourceId: integer("source_id").references(() => newsSources.id, {
+      onDelete: "set null",
+    }),
+    title: text("title").notNull(),
+    url: text("url").notNull().unique(),
+    summary: text("summary"),
+    publishedAt: text("published_at"),
+    read: integer("read").notNull().default(0),
+    createdAt: text("created_at").notNull(),
+    // Klucz deduplikacji: lower(trim(title)) + '|' + published_at.slice(0,10),
+    // liczony w JS przez computeDedupKey() (src/lib/format.ts) — patrz
+    // migrateNewsDedup() w src/db/index.ts. null gdy brak published_at.
+    dedupKey: text("dedup_key"),
+  },
+  (t) => [uniqueIndex("idx_news_dedup").on(t.dedupKey)]
+);
 
 // Dopasowanie news ↔ spółka (jeden news może dotyczyć wielu spółek).
 export const newsCompany = sqliteTable(
