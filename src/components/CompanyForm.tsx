@@ -161,7 +161,7 @@ export function CompanyModalButton({
               type="checkbox"
               checked={watchlist}
               onChange={(e) => setWatchlist(e.target.checked)}
-              className="accent-[#3987e5]"
+              className="accent-accent"
             />
             Obserwuj na watchliście
           </label>

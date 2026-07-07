@@ -36,7 +36,7 @@ export function NewsFilter({ companies }: { companies: Company[] }) {
           type="checkbox"
           checked={unread}
           onChange={(e) => navigate(company, e.target.checked)}
-          className="accent-[#3987e5]"
+          className="accent-accent"
         />
         tylko nieprzeczytane
       </label>
