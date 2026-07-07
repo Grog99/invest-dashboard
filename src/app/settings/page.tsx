@@ -4,10 +4,12 @@ import {
   getSetting,
   SETTING_KEYS,
   DEFAULT_MODEL,
+  DEFAULT_CRON,
 } from "@/lib/settings";
 import { seedDefaultSourcesIfEmpty } from "@/lib/news";
 import { Card, PageHeader } from "@/components/ui";
 import { AiSettingsForm } from "@/components/AiSettingsForm";
+import { ScheduleSettingsForm } from "@/components/ScheduleSettingsForm";
 import { SourcesManager } from "@/components/SourcesManager";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +17,8 @@ export const dynamic = "force-dynamic";
 export default function SettingsPage() {
   const apiKey = getSetting(SETTING_KEYS.openrouterApiKey);
   const model = getSetting(SETTING_KEYS.openrouterModel) || DEFAULT_MODEL;
+  const cronQuotes = getSetting(SETTING_KEYS.cronQuotes) ?? DEFAULT_CRON.quotes;
+  const cronNews = getSetting(SETTING_KEYS.cronNews) ?? DEFAULT_CRON.news;
   const sources = seedDefaultSourcesIfEmpty();
   const allCompanies = db
     .select()
@@ -38,6 +42,10 @@ export default function SettingsPage() {
               apiKey ? `${apiKey.slice(0, 8)}…${apiKey.slice(-4)}` : null
             }
           />
+        </Card>
+
+        <Card title="Harmonogram odświeżania">
+          <ScheduleSettingsForm cronQuotes={cronQuotes} cronNews={cronNews} />
         </Card>
 
         <Card title="Źródła newsów (RSS)">

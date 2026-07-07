@@ -8,7 +8,7 @@ Uporządkowana lista propozycji rozwoju invest-dashboardu — od drobnych uspraw
 
 ## 1. Szybkie usprawnienia (małe, duży zysk)
 
-### 1.1 Scalanie duplikatów newsów między feedami
+### 1.1 Scalanie duplikatów newsów między feedami ✅ ZROBIONE
 - **Opis:** Ten sam artykuł Bankiera trafia do bazy wielokrotnie (feedy `gielda.xml` / `wiadomosci.xml` / `espi.xml` używają różnych URL-i, więc deduplikacja po `news_items.url UNIQUE` w `refreshNews()` w `src/lib/news.ts` go nie łapie). Rozwiązanie: przed insertem sprawdzać duplikat po znormalizowanym tytule + dacie publikacji (dzień), np. dodatkowa kolumna `dedup_key` (`lower(trim(title)) + '|' + published_at.slice(0,10)`) z indeksem UNIQUE i `onConflictDoNothing`; przy trafieniu dopisywać tylko brakujące dopasowania w `news_company`.
 - **Wartość:** Czystsza lista newsów i mniej szumu w kontekście AI (`buildCompanyContext` bierze 15 ostatnich newsów — duplikaty wypychają unikalne treści).
 - **Złożoność:** S
