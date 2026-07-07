@@ -92,6 +92,10 @@ CREATE TABLE IF NOT EXISTS news_items (
   dedup_key TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_news_published ON news_items(published_at DESC);
+-- Indeks wyrażeniowy pod kursor keyset paginacji (src/lib/news.ts listNews):
+-- odzwierciedla dokładnie ORDER BY/WHERE zapytania stronicowanego, żeby
+-- planner mógł go użyć zamiast sortować całą tabelę przy rosnącej bazie.
+CREATE INDEX IF NOT EXISTS idx_news_published_id ON news_items(coalesce(published_at,'') DESC, id DESC);
 
 CREATE TABLE IF NOT EXISTS news_company (
   news_id INTEGER NOT NULL REFERENCES news_items(id) ON DELETE CASCADE,

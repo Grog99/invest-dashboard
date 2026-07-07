@@ -1,12 +1,11 @@
-import Link from "next/link";
 import { db, companies } from "@/db";
 import { asc } from "drizzle-orm";
-import { listNews } from "@/lib/news";
-import { fmtDateTime } from "@/lib/format";
-import { Card, PageHeader, Badge, EmptyState } from "@/components/ui";
+import { listNews, encodeCursor } from "@/lib/news";
+import { Card, PageHeader, EmptyState } from "@/components/ui";
 import { RefreshNewsButton } from "@/components/RefreshButtons";
-import { NewsReadToggle, MarkAllReadButton } from "@/components/NewsActions";
+import { MarkAllReadButton } from "@/components/NewsActions";
 import { NewsFilter } from "@/components/NewsFilter";
+import { NewsInfiniteList } from "@/components/NewsInfiniteList";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +23,19 @@ export default async function NewsPage({
     .from(companies)
     .orderBy(asc(companies.ticker))
     .all();
-  const news = listNews({ companyId, unreadOnly, limit: 150 });
+  const news = listNews({ companyId, unreadOnly, limit: 50 });
+  const initialCursor =
+    news.length === 50 ? encodeCursor(news[news.length - 1]) : null;
+  // Czysta funkcja świeżo pobranych danych (bez Date.now()/Math.random() —
+  // React Compiler / react-hooks/purity tego zabrania w ciele komponentu):
+  // zmienia się, gdy zmieni się filtr LUB skład/stan `read` pierwszej porcji
+  // — czyli po "Oznacz wszystkie jako przeczytane" i po "Pobierz newsy"
+  // (oba wołają router.refresh()). Wymusza pełny remount NewsInfiniteList ze
+  // świeżą pierwszą porcją zamiast prób synchronizowania stanu klienckiego
+  // z propsami po fakcie (patrz komentarz w NewsInfiniteList.tsx).
+  const listKey = `${companyId ?? "all"}-${unreadOnly ? 1 : 0}-${news
+    .map((n) => `${n.id}:${n.read ? 1 : 0}`)
+    .join(",")}`;
 
   return (
     <div>
@@ -51,37 +62,13 @@ export default async function NewsPage({
             action={<RefreshNewsButton />}
           />
         ) : (
-          <ul className="divide-y divide-border">
-            {news.map((n) => (
-              <li key={n.id} className="flex items-start gap-3 py-3">
-                <div className="min-w-0 flex-1">
-                  <a
-                    href={n.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`text-[13.5px] leading-snug hover:text-accent hover:underline ${n.read ? "text-ink2" : "font-medium text-ink"}`}
-                  >
-                    {n.title}
-                  </a>
-                  {n.summary && (
-                    <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-muted">
-                      {n.summary}
-                    </p>
-                  )}
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
-                    {n.sourceName && <span>{n.sourceName}</span>}
-                    {n.publishedAt && <span>· {fmtDateTime(n.publishedAt)}</span>}
-                    {n.companies.map((c) => (
-                      <Link key={c.id} href={`/companies/${c.id}`}>
-                        <Badge tone="accent">{c.ticker}</Badge>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-                <NewsReadToggle id={n.id} read={n.read} />
-              </li>
-            ))}
-          </ul>
+          <NewsInfiniteList
+            key={listKey}
+            initialItems={news}
+            initialCursor={initialCursor}
+            companyId={companyId}
+            unreadOnly={unreadOnly}
+          />
         )}
       </Card>
     </div>
