@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import cron from "node-cron";
 import {
   getSetting,
   setSetting,
+  getTheme,
   SETTING_KEYS,
   DEFAULT_MODEL,
   DEFAULT_CRON,
@@ -17,6 +19,7 @@ export async function GET() {
     apiKeyPreview: apiKey ? `${apiKey.slice(0, 8)}…${apiKey.slice(-4)}` : null,
     cronQuotes: getSetting(SETTING_KEYS.cronQuotes) ?? DEFAULT_CRON.quotes,
     cronNews: getSetting(SETTING_KEYS.cronNews) ?? DEFAULT_CRON.news,
+    theme: getTheme(),
   });
 }
 
@@ -49,7 +52,25 @@ export async function POST(req: NextRequest) {
     setSetting(SETTING_KEYS.cronNews, body.cronNews.trim());
   }
 
-  reloadScheduler();
+  if (body.theme === "dark" || body.theme === "light") {
+    setSetting(SETTING_KEYS.theme, body.theme);
+    (await cookies()).set("theme", body.theme, {
+      path: "/",
+      maxAge: 31536000,
+      sameSite: "lax",
+      httpOnly: true,
+    });
+  }
+
+  // reloadScheduler() jest kosztowny (przeładowuje harmonogram crona) —
+  // wołamy go tylko, gdy w body faktycznie są pola cron, żeby np. samo
+  // przełączenie motywu nie przeładowywało harmonogramu.
+  if (
+    typeof body.cronQuotes === "string" ||
+    typeof body.cronNews === "string"
+  ) {
+    reloadScheduler();
+  }
 
   return NextResponse.json({ ok: true });
 }

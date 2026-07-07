@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
-/* Motyw ciemny — tokeny wg zwalidowanej palety (dataviz reference, dark mode). */
-@theme {
+/* Surowe wartości tokenów — CELOWO poza @theme. Tailwind v4 z (nie-inline)
+   @theme piecze wartości literalnie w jeden bucket `:root`/`@layer theme` i
+   NIE respektuje warunkowych nadpisań spoza @theme (np. :root[data-theme]) —
+   cały taki blok jest po prostu wycinany z wynikowego CSS. Dlatego prawdziwe
+   wartości (dark = baza, light = nadpisanie) żyją tutaj, w zwykłym CSS, gdzie
+   normalna kaskada + specyficzność selektora atrybutu działa poprawnie;
+   @theme niżej tylko je aliasuje (referencją `var()`, nie literałem) pod
+   nazwy, których Tailwind używa do generowania klas utility (`bg-bg` itd.). */
+:root {
   --color-bg: #0d0d0d; /* płaszczyzna strony */
   --color-surface: #1a1a19; /* karty / powierzchnia wykresów */
   --color-surface2: #232321; /* hover, inputy */
@@ -16,9 +23,78 @@
   --color-neg: #e66767; /* delta ujemna (red, dark) */
   --color-warn: #fab219;
 
+  /* Paleta kategoryczna (donut alokacji) — czytana tylko z JS
+     (getComputedStyle), nigdy jako klasa utility Tailwinda, więc nie musi
+     (i nie powinna) iść przez @theme. */
+  --color-cat-1: #3987e5;
+  --color-cat-2: #199e70;
+  --color-cat-3: #c98500;
+  --color-cat-4: #008300;
+  --color-cat-5: #9085e9;
+  --color-cat-6: #e66767;
+  --color-cat-7: #d55181;
+  --color-cat-8: #d95926;
+  --color-cat-other: #898781;
+}
+
+/* Motyw jasny — nadpisanie tych samych zmiennych pod bardziej szczegółowym
+   selektorem (specyficzność atrybutu > gołego :root), zaakceptowany punkt
+   startowy (bez formalnego przejścia WCAG przed mergem). */
+:root[data-theme="light"] {
+  --color-bg: #ffffff;
+  --color-surface: #f7f7f5;
+  --color-surface2: #ececea;
+  --color-border: #e2e2df;
+  --color-border2: #cfcfca;
+  --color-ink: #1a1a19;
+  --color-ink2: #3f3f3a;
+  --color-muted: #6b6a64;
+  --color-accent: #1c5cab; /* ciemniejszy niebieski dla kontrastu na bieli */
+  --color-accent-deep: #14468a;
+  --color-pos: #0a7a0a;
+  --color-neg: #cc4444;
+  --color-warn: #b26b00;
+
+  --color-cat-1: #1c5cab;
+  --color-cat-2: #147a56;
+  --color-cat-3: #a06800;
+  --color-cat-4: #006600;
+  --color-cat-5: #6a5fd1;
+  --color-cat-6: #cc4444;
+  --color-cat-7: #b03a67;
+  --color-cat-8: #b0451c;
+  --color-cat-other: #6b6a64;
+}
+
+/* Aliasy dla generatora utility Tailwinda — `inline`, żeby emitować
+   `var(--color-*)` (referencję), a NIE zapieczoną literalną wartość; patrz
+   komentarz nad :root wyżej. */
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface2: var(--color-surface2);
+  --color-border: var(--color-border);
+  --color-border2: var(--color-border2);
+  --color-ink: var(--color-ink);
+  --color-ink2: var(--color-ink2);
+  --color-muted: var(--color-muted);
+  --color-accent: var(--color-accent);
+  --color-accent-deep: var(--color-accent-deep);
+  --color-pos: var(--color-pos);
+  --color-neg: var(--color-neg);
+  --color-warn: var(--color-warn);
+
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI",
     sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* Płynne przejście kolorów przy przełączeniu motywu (nie skokowa zmiana). */
+*,
+*::before,
+*::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 body {
