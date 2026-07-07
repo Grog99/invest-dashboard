@@ -14,6 +14,7 @@ import {
   type IChartApi,
   type UTCTimestamp,
 } from "lightweight-charts";
+import { useThemeColors } from "@/components/ThemeProvider";
 
 export interface CandlePoint {
   time: string; // YYYY-MM-DD
@@ -23,9 +24,6 @@ export interface CandlePoint {
   close: number;
   volume: number | null;
 }
-
-const COLOR_POS = "#0ca30c"; // --color-pos
-const COLOR_NEG = "#e66767"; // --color-neg
 
 export function CandleChart({
   data,
@@ -39,11 +37,16 @@ export function CandleChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const formatterRef = useRef(valueFormatter);
+  const colors = useThemeColors();
 
   useEffect(() => {
     formatterRef.current = valueFormatter;
   }, [valueFormatter]);
 
+  // Mount-only: tworzy instancję wykresu. Kolory poziomu wykresu (siatka,
+  // osie, crosshair) NIE są tu ustawiane na sztywno — zależą od motywu i są
+  // aktualizowane w osobnym efekcie niżej (`chart.applyOptions`), analogicznie
+  // do AreaChart.tsx.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -52,18 +55,7 @@ export function CandleChart({
       autoSize: true,
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#898781",
         fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: "rgba(44,44,42,0.6)" },
-        horzLines: { color: "rgba(44,44,42,0.6)" },
-      },
-      rightPriceScale: { borderColor: "#383835" },
-      timeScale: { borderColor: "#383835", timeVisible: false },
-      crosshair: {
-        horzLine: { labelBackgroundColor: "#383835" },
-        vertLine: { labelBackgroundColor: "#383835" },
       },
       localization: {
         locale: "pl-PL",
@@ -83,17 +75,42 @@ export function CandleChart({
     };
   }, []);
 
+  // Kolory poziomu wykresu — zależne od motywu, przemalowywane przez
+  // applyOptions przy każdej zmianie `colors`, bez odtwarzania wykresu.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    chart.applyOptions({
+      layout: {
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: colors.muted,
+        fontSize: 11,
+      },
+      grid: {
+        vertLines: { color: colors.border },
+        horzLines: { color: colors.border },
+      },
+      rightPriceScale: { borderColor: colors.border2 },
+      timeScale: { borderColor: colors.border2, timeVisible: false },
+      crosshair: {
+        horzLine: { labelBackgroundColor: colors.border2 },
+        vertLine: { labelBackgroundColor: colors.border2 },
+      },
+    });
+  }, [colors]);
+
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: COLOR_POS,
-      downColor: COLOR_NEG,
-      borderUpColor: COLOR_POS,
-      borderDownColor: COLOR_NEG,
-      wickUpColor: COLOR_POS,
-      wickDownColor: COLOR_NEG,
+      upColor: colors.pos,
+      downColor: colors.neg,
+      borderUpColor: colors.pos,
+      borderDownColor: colors.neg,
+      wickUpColor: colors.pos,
+      wickDownColor: colors.neg,
       priceLineVisible: false,
     });
     candleSeries.priceScale().applyOptions({
@@ -125,8 +142,8 @@ export function CandleChart({
         value: b.volume ?? 0,
         color:
           b.close >= (b.open ?? b.close)
-            ? "rgba(12,163,12,0.5)"
-            : "rgba(230,103,103,0.5)",
+            ? `${colors.pos}80`
+            : `${colors.neg}80`,
       }))
     );
 
@@ -144,7 +161,7 @@ export function CandleChart({
         // wykres mógł już zostać usunięty
       }
     };
-  }, [data]);
+  }, [data, colors]);
 
   return <div ref={containerRef} style={{ height }} className="w-full" />;
 }

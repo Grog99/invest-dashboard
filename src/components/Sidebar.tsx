@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "./ThemeToggle";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: "◧" },
@@ -54,10 +55,13 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="border-t border-border px-5 py-4 text-[11px] leading-relaxed text-muted">
-        Notowania: Yahoo Finance (~15 min opóźnienia)
-        <br />
-        Kursy walut: NBP
+      <div className="border-t border-border px-5 py-4">
+        <ThemeToggle />
+        <div className="mt-3 text-[11px] leading-relaxed text-muted">
+          Notowania: Yahoo Finance (~15 min opóźnienia)
+          <br />
+          Kursy walut: NBP
+        </div>
       </div>
     </aside>
   );

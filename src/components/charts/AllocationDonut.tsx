@@ -1,22 +1,42 @@
 "use client";
 
 // Alokacja portfela — donut z legendą (ticker, udział, wartość).
-// Kolory: kategoryczna paleta dark w stałej kolejności slotów; "Inne" = szarość.
+// Kolory: kategoryczna paleta ze zmiennych CSS `--color-cat-*` (jedno źródło
+// prawdy w globals.css, dark + light), stała kolejność slotów; "Inne" = szarość.
+//
+// Odstępstwo od planu: zamiast `useThemeColors()` (odczyt przez
+// getComputedStyle, ze snapshotowym fallbackiem "dark" na SSR) używamy tu
+// bezpośrednich referencji `var(--color-cat-N)`. Powód: ta strona (`page.tsx`)
+// jest `force-dynamic` i renderuje ten komponent po stronie serwera z realnymi
+// danymi; lista legendy poniżej to zwykły JSX (poza `ResponsiveContainer`,
+// który na SSR nie renderuje swoich dzieci, bo nie zna jeszcze wymiarów), więc
+// TA lista faktycznie trafia do HTML-a z serwera. Gdyby `colorFor` zwracał
+// hex z `useThemeColors()`, na SSR zawsze dostalibyśmy fallback "dark" —
+// przy zapisanym motywie jasnym kolor `style` w SSR HTML różniłby się od
+// kolorów po hydratacji (prawdziwy odczyt `getComputedStyle` w motywie
+// light), co jest dokładnie ostrzeżeniem hydration mismatch, którego kryteria
+// akceptacji zabraniają. `var(--color-cat-N)` rozwiązuje się identycznie po
+// obu stronach (sama nazwa zmiennej w atrybucie/stylu), a przeglądarka
+// podstawia właściwą wartość przez kaskadę na `<html data-theme>` — SSR i
+// klient są więc zawsze zgodne, bez potrzeby JS-owego snapshotu czy
+// przerenderowania przy przełączeniu motywu. `fill`/`stroke` w SVG (recharts)
+// i `background` w zwykłym `style` obsługują `var()` tak samo jak reszta CSS.
 
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { fmtMoney } from "@/lib/format";
 
 const PALETTE = [
-  "#3987e5",
-  "#199e70",
-  "#c98500",
-  "#008300",
-  "#9085e9",
-  "#e66767",
-  "#d55181",
-  "#d95926",
+  "var(--color-cat-1)",
+  "var(--color-cat-2)",
+  "var(--color-cat-3)",
+  "var(--color-cat-4)",
+  "var(--color-cat-5)",
+  "var(--color-cat-6)",
+  "var(--color-cat-7)",
+  "var(--color-cat-8)",
 ];
-const OTHER_COLOR = "#898781";
+const OTHER_COLOR = "var(--color-cat-other)";
+const STROKE_COLOR = "var(--color-surface)";
 const MAX_SLICES = 7;
 
 export interface AllocationSlice {
@@ -62,7 +82,7 @@ export function AllocationDonut({ data }: { data: AllocationSlice[] }) {
               outerRadius={90}
               startAngle={90}
               endAngle={-270}
-              stroke="#1a1a19"
+              stroke={STROKE_COLOR}
               strokeWidth={2}
               isAnimationActive={false}
             >

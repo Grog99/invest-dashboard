@@ -6,6 +6,7 @@ export const SETTING_KEYS = {
   openrouterModel: "openrouter_model",
   cronQuotes: "cron_quotes",
   cronNews: "cron_news",
+  theme: "theme",
 } as const;
 
 export const DEFAULT_MODEL = "anthropic/claude-sonnet-4.5";
@@ -14,6 +15,8 @@ export const DEFAULT_CRON = {
   quotes: "*/15 9-17 * * 1-5",
   news: "*/30 * * * *",
 } as const;
+
+export const DEFAULT_THEME = "dark";
 
 export function getSetting(key: string): string | null {
   const row = db.select().from(settings).where(eq(settings.key, key)).get();
@@ -30,4 +33,9 @@ export function setSetting(key: string, value: string): void {
 export function getAllSettings(): Record<string, string> {
   const rows = db.select().from(settings).all();
   return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+}
+
+export function getTheme(): "dark" | "light" {
+  const value = getSetting(SETTING_KEYS.theme);
+  return value === "light" ? "light" : DEFAULT_THEME;
 }

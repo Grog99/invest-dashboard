@@ -78,7 +78,7 @@ export function SourcesManager({
                   type="checkbox"
                   checked={s.enabled === 1}
                   onChange={() => toggle(s)}
-                  className="accent-[#3987e5]"
+                  className="accent-accent"
                   title={s.enabled === 1 ? "Wyłącz źródło" : "Włącz źródło"}
                 />
               </label>

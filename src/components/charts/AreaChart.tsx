@@ -11,6 +11,7 @@ import {
   type IChartApi,
   type UTCTimestamp,
 } from "lightweight-charts";
+import { useThemeColors } from "@/components/ThemeProvider";
 
 export interface AreaPoint {
   time: string; // YYYY-MM-DD
@@ -19,7 +20,7 @@ export interface AreaPoint {
 
 export function AreaChart({
   data,
-  color = "#3987e5",
+  color,
   height = 280,
   valueFormatter,
 }: {
@@ -31,8 +32,18 @@ export function AreaChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const formatterRef = useRef(valueFormatter);
-  formatterRef.current = valueFormatter;
+  useEffect(() => {
+    formatterRef.current = valueFormatter;
+  }, [valueFormatter]);
+  const colors = useThemeColors();
+  // Domyślny kolor serii = akcent motywu; przekazany `color` (jeśli jest)
+  // ma pierwszeństwo i nie zmienia się przy przełączeniu motywu.
+  const seriesColor = color ?? colors.accent;
 
+  // Mount-only: tworzy instancję wykresu. Kolory poziomu wykresu (siatka,
+  // osie, crosshair) NIE są tu ustawiane na sztywno — zależą od motywu i
+  // są aktualizowane w osobnym efekcie niżej (`chart.applyOptions`), żeby
+  // przełączenie motywu nie wymagało przetworzenia całego wykresu.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -41,18 +52,7 @@ export function AreaChart({
       autoSize: true,
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#898781",
         fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: "rgba(44,44,42,0.6)" },
-        horzLines: { color: "rgba(44,44,42,0.6)" },
-      },
-      rightPriceScale: { borderColor: "#383835" },
-      timeScale: { borderColor: "#383835", timeVisible: false },
-      crosshair: {
-        horzLine: { labelBackgroundColor: "#383835" },
-        vertLine: { labelBackgroundColor: "#383835" },
       },
       localization: {
         locale: "pl-PL",
@@ -72,15 +72,41 @@ export function AreaChart({
     };
   }, []);
 
+  // Kolory poziomu wykresu — zależne od motywu, przemalowywane przez
+  // applyOptions przy każdej zmianie `colors` (czyli przy przełączeniu
+  // motywu), bez odtwarzania wykresu.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    chart.applyOptions({
+      layout: {
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: colors.muted,
+        fontSize: 11,
+      },
+      grid: {
+        vertLines: { color: colors.border },
+        horzLines: { color: colors.border },
+      },
+      rightPriceScale: { borderColor: colors.border2 },
+      timeScale: { borderColor: colors.border2, timeVisible: false },
+      crosshair: {
+        horzLine: { labelBackgroundColor: colors.border2 },
+        vertLine: { labelBackgroundColor: colors.border2 },
+      },
+    });
+  }, [colors]);
+
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
 
     const series = chart.addSeries(AreaSeries, {
-      lineColor: color,
+      lineColor: seriesColor,
       lineWidth: 2,
-      topColor: `${color}40`,
-      bottomColor: `${color}05`,
+      topColor: `${seriesColor}40`,
+      bottomColor: `${seriesColor}05`,
       priceLineVisible: false,
       lastValueVisible: true,
     });
@@ -100,7 +126,7 @@ export function AreaChart({
         // wykres mógł już zostać usunięty
       }
     };
-  }, [data, color]);
+  }, [data, seriesColor]);
 
   return <div ref={containerRef} style={{ height }} className="w-full" />;
 }
