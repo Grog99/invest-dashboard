@@ -12,7 +12,7 @@ import {
   type NewsSource,
 } from "@/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { nowISO } from "./format";
+import { computeDedupKey, nowISO } from "./format";
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -206,6 +206,7 @@ export async function refreshNews(): Promise<NewsRefreshResult> {
       result.fetched += items.length;
 
       for (const item of items) {
+        const dedupKey = computeDedupKey(item.title, item.publishedAt);
         const inserted = db
           .insert(newsItems)
           .values({
@@ -215,13 +216,31 @@ export async function refreshNews(): Promise<NewsRefreshResult> {
             summary: item.summary,
             publishedAt: item.publishedAt,
             createdAt: nowISO(),
+            dedupKey,
           })
-          .onConflictDoNothing({ target: newsItems.url })
+          .onConflictDoNothing()
           .returning({ id: newsItems.id })
           .get();
 
-        if (!inserted) continue; // duplikat — już mamy
-        result.inserted++;
+        let newsId: number;
+        if (inserted) {
+          newsId = inserted.id;
+          result.inserted++;
+        } else {
+          // Konflikt na url lub dedup_key — nie pomijamy matchingu, tylko
+          // doklejamy ewentualne brakujące dopasowania do kanonicznego wiersza.
+          const existing = db
+            .select({ id: newsItems.id })
+            .from(newsItems)
+            .where(
+              dedupKey
+                ? eq(newsItems.dedupKey, dedupKey)
+                : eq(newsItems.url, item.url)
+            )
+            .get();
+          if (!existing) continue; // rzadki edge (np. ten sam url, zmieniony tytuł) — pomijamy
+          newsId = existing.id;
+        }
 
         // Dopasowanie do spółek.
         const companyIds = new Set<number>();
@@ -233,7 +252,7 @@ export async function refreshNews(): Promise<NewsRefreshResult> {
 
         for (const companyId of companyIds) {
           db.insert(newsCompany)
-            .values({ newsId: inserted.id, companyId })
+            .values({ newsId, companyId })
             .onConflictDoNothing()
             .run();
         }
