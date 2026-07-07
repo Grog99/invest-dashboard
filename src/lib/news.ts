@@ -11,7 +11,7 @@ import {
   type Company,
   type NewsSource,
 } from "@/db";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { computeDedupKey, nowISO } from "./format";
 
 const UA =
@@ -286,13 +286,60 @@ export interface NewsListItem {
   companies: { id: number; ticker: string }[];
 }
 
+// Kursor keyset — ostatni element zwróconej porcji. Para
+// (coalesce(publishedAt,''), id) jest ścisłym porządkiem totalnym zgodnym
+// z ORDER BY/sortem JS poniżej, więc daje stabilną paginację bez
+// duplikatów/pominięć przy równoległych insertach (patrz plan
+// docs/plans/paginacja-newsow.md).
+export interface NewsCursor {
+  publishedAt: string | null;
+  id: number;
+}
+
+// Nieprzezroczysty param na drut: base64url(JSON { p, i }).
+export function encodeCursor(item: {
+  publishedAt: string | null;
+  id: number;
+}): string {
+  return Buffer.from(
+    JSON.stringify({ p: item.publishedAt, i: item.id }),
+    "utf-8"
+  ).toString("base64url");
+}
+
+export function decodeCursor(raw: string): NewsCursor | null {
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(raw, "base64url").toString("utf-8")
+    ) as { p: unknown; i: unknown };
+    if (
+      typeof parsed.i !== "number" ||
+      (parsed.p !== null && typeof parsed.p !== "string")
+    ) {
+      return null;
+    }
+    return { publishedAt: parsed.p as string | null, id: parsed.i };
+  } catch {
+    return null;
+  }
+}
+
 // Lista newsów z dopasowanymi spółkami i nazwą źródła (do stron).
 export function listNews(opts: {
   companyId?: number;
   limit?: number;
   unreadOnly?: boolean;
+  cursor?: NewsCursor;
 }): NewsListItem[] {
   const limit = opts.limit ?? 50;
+
+  // Warunek „starsze niż kursor" na (coalesce(published_at,''), id) malejąco —
+  // coalesce eliminuje NULL z porównania (surowe published_at < ... wyklucza
+  // wiersze bez daty z WHERE i nigdy by ich nie dostronicowało).
+  const cursorCondition = opts.cursor
+    ? sql`(coalesce(${newsItems.publishedAt}, ''), ${newsItems.id}) < (${opts.cursor.publishedAt ?? ""}, ${opts.cursor.id})`
+    : undefined;
+  const orderByExpr = sql`coalesce(${newsItems.publishedAt}, '') DESC, ${newsItems.id} DESC`;
 
   let baseIds: number[];
   if (opts.companyId) {
@@ -303,10 +350,11 @@ export function listNews(opts: {
       .where(
         and(
           eq(newsCompany.companyId, opts.companyId),
-          opts.unreadOnly ? eq(newsItems.read, 0) : undefined
+          opts.unreadOnly ? eq(newsItems.read, 0) : undefined,
+          cursorCondition
         )
       )
-      .orderBy(desc(newsItems.publishedAt))
+      .orderBy(orderByExpr)
       .limit(limit)
       .all()
       .map((r) => r.id);
@@ -314,8 +362,13 @@ export function listNews(opts: {
     baseIds = db
       .select({ id: newsItems.id })
       .from(newsItems)
-      .where(opts.unreadOnly ? eq(newsItems.read, 0) : undefined)
-      .orderBy(desc(newsItems.publishedAt))
+      .where(
+        and(
+          opts.unreadOnly ? eq(newsItems.read, 0) : undefined,
+          cursorCondition
+        )
+      )
+      .orderBy(orderByExpr)
       .limit(limit)
       .all()
       .map((r) => r.id);
@@ -360,7 +413,11 @@ export function listNews(opts: {
       sourceName: it.sourceId !== null ? (sources.get(it.sourceId) ?? null) : null,
       companies: matchesByNews.get(it.id) ?? [],
     }))
-    .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
+    .sort(
+      (a, b) =>
+        (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "") ||
+        b.id - a.id
+    );
 }
 
 // Domyślne źródła — zweryfikowane kanały RSS, seedowane gdy tabela jest pusta.
