@@ -1,0 +1,22 @@
+.git
+.gitignore
+.github
+.vscode
+node_modules
+.next
+out
+build
+coverage
+# CRITICAL: never bake the local dev DB into the image.
+data
+.env
+.env.*
+*.pem
+*.log
+*.tsbuildinfo
+Dockerfile
+.dockerignore
+README.md
+AGENTS.md
+CLAUDE.md
+context

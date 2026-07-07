@@ -1,0 +1,66 @@
+import { db, companies } from "@/db";
+import { asc } from "drizzle-orm";
+import {
+  getSetting,
+  SETTING_KEYS,
+  DEFAULT_MODEL,
+} from "@/lib/settings";
+import { seedDefaultSourcesIfEmpty } from "@/lib/news";
+import { Card, PageHeader } from "@/components/ui";
+import { AiSettingsForm } from "@/components/AiSettingsForm";
+import { SourcesManager } from "@/components/SourcesManager";
+
+export const dynamic = "force-dynamic";
+
+export default function SettingsPage() {
+  const apiKey = getSetting(SETTING_KEYS.openrouterApiKey);
+  const model = getSetting(SETTING_KEYS.openrouterModel) || DEFAULT_MODEL;
+  const sources = seedDefaultSourcesIfEmpty();
+  const allCompanies = db
+    .select()
+    .from(companies)
+    .orderBy(asc(companies.ticker))
+    .all();
+
+  return (
+    <div>
+      <PageHeader
+        title="Ustawienia"
+        sub="Konfiguracja AI i źródeł newsów. Wszystkie dane trzymane są lokalnie w data/invest.db."
+      />
+
+      <div className="space-y-4">
+        <Card title="AI — OpenRouter">
+          <AiSettingsForm
+            model={model}
+            hasApiKey={!!apiKey}
+            apiKeyPreview={
+              apiKey ? `${apiKey.slice(0, 8)}…${apiKey.slice(-4)}` : null
+            }
+          />
+        </Card>
+
+        <Card title="Źródła newsów (RSS)">
+          <SourcesManager sources={sources} companies={allCompanies} />
+        </Card>
+
+        <Card title="Dane">
+          <div className="space-y-1 text-[13px] text-ink2">
+            <p>
+              Baza danych:{" "}
+              <code className="rounded bg-surface2 px-1.5 py-0.5 text-[12px]">
+                data/invest.db
+              </code>{" "}
+              (SQLite) — kopia zapasowa to po prostu kopia tego pliku.
+            </p>
+            <p className="text-[12px] text-muted">
+              Notowania: Yahoo Finance (opóźnione ~15 min; GPW przez sufiks
+              .WA). Kursy walut: API NBP (tabela A). Newsy: kanały RSS
+              skonfigurowane powyżej.
+            </p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
