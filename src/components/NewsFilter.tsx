@@ -24,11 +24,11 @@ export function NewsFilter({ companies }: { companies: Company[] }) {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Select
         value={company}
         onChange={(e) => navigate(e.target.value, unread, mine)}
-        className="w-56"
+        className="w-full sm:w-56"
       >
         <option value="">Wszystkie spółki</option>
         {companies.map((c) => (

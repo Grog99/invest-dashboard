@@ -11,6 +11,7 @@ import {
   Delta,
   Badge,
   EmptyState,
+  Field,
 } from "@/components/ui";
 import { RefreshQuotesButton } from "@/components/RefreshButtons";
 import { CompanyModalButton } from "@/components/CompanyForm";
@@ -75,80 +76,151 @@ export default function WatchlistPage() {
             }
           />
         ) : (
-          <Table
-            head={
-              <>
-                <Th />
-                <Th>Spółka</Th>
-                <Th>Rynek</Th>
-                <Th>Typ</Th>
-                <Th right>Kurs</Th>
-                <Th right>Dziś</Th>
-                <Th right>Nieprzeczytane newsy</Th>
-                <Th right>Aktualizacja</Th>
-              </>
-            }
-          >
-            {watched.map((c) => {
-              const q = quotes.get(c.id);
-              const dayPct =
-                q?.price !== undefined && q?.prevClose
-                  ? ((q.price - q.prevClose) / q.prevClose) * 100
-                  : null;
-              const unread = unreadCounts.get(c.id) ?? 0;
-              return (
-                <tr key={c.id} className="hover:bg-surface2/40">
-                  <Td className="w-8">
-                    <WatchlistToggle companyId={c.id} watchlisted />
-                  </Td>
-                  <Td>
-                    <Link
-                      href={`/companies/${c.id}`}
-                      className="font-medium text-ink hover:text-accent"
-                    >
-                      {c.ticker}
-                    </Link>
-                    <span className="ml-2 hidden text-[12px] text-muted lg:inline">
-                      {c.name}
-                    </span>
-                  </Td>
-                  <Td>
-                    <Badge>{c.market}</Badge>
-                  </Td>
-                  <Td>
-                    <Badge tone="accent">{TYPE_LABELS[c.type] ?? c.type}</Badge>
-                  </Td>
-                  <Td right>
-                    {q ? (
-                      <>
-                        {fmtNumber(q.price)}{" "}
-                        <span className="text-muted">{c.currency}</span>
-                      </>
-                    ) : (
-                      "—"
-                    )}
-                  </Td>
-                  <Td right>
-                    <Delta pct={dayPct} />
-                  </Td>
-                  <Td right>
-                    {unread > 0 ? (
-                      <Link href={`/companies/${c.id}`}>
-                        <Badge tone="accent">{unread}</Badge>
-                      </Link>
-                    ) : (
-                      <span className="text-muted">0</span>
-                    )}
-                  </Td>
-                  <Td right>
-                    <span className="text-[11px] text-muted">
-                      {q ? fmtDateTime(q.updatedAt) : "—"}
-                    </span>
-                  </Td>
-                </tr>
-              );
-            })}
-          </Table>
+          <>
+            <div className="hidden md:block">
+              <Table
+                head={
+                  <>
+                    <Th />
+                    <Th>Spółka</Th>
+                    <Th>Rynek</Th>
+                    <Th>Typ</Th>
+                    <Th right>Kurs</Th>
+                    <Th right>Dziś</Th>
+                    <Th right>Nieprzeczytane newsy</Th>
+                    <Th right>Aktualizacja</Th>
+                  </>
+                }
+              >
+                {watched.map((c) => {
+                  const q = quotes.get(c.id);
+                  const dayPct =
+                    q?.price !== undefined && q?.prevClose
+                      ? ((q.price - q.prevClose) / q.prevClose) * 100
+                      : null;
+                  const unread = unreadCounts.get(c.id) ?? 0;
+                  return (
+                    <tr key={c.id} className="hover:bg-surface2/40">
+                      <Td className="w-8">
+                        <WatchlistToggle companyId={c.id} watchlisted />
+                      </Td>
+                      <Td>
+                        <Link
+                          href={`/companies/${c.id}`}
+                          className="font-medium text-ink hover:text-accent"
+                        >
+                          {c.ticker}
+                        </Link>
+                        <span className="ml-2 hidden text-[12px] text-muted lg:inline">
+                          {c.name}
+                        </span>
+                      </Td>
+                      <Td>
+                        <Badge>{c.market}</Badge>
+                      </Td>
+                      <Td>
+                        <Badge tone="accent">
+                          {TYPE_LABELS[c.type] ?? c.type}
+                        </Badge>
+                      </Td>
+                      <Td right>
+                        {q ? (
+                          <>
+                            {fmtNumber(q.price)}{" "}
+                            <span className="text-muted">{c.currency}</span>
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </Td>
+                      <Td right>
+                        <Delta pct={dayPct} />
+                      </Td>
+                      <Td right>
+                        {unread > 0 ? (
+                          <Link href={`/companies/${c.id}`}>
+                            <Badge tone="accent">{unread}</Badge>
+                          </Link>
+                        ) : (
+                          <span className="text-muted">0</span>
+                        )}
+                      </Td>
+                      <Td right>
+                        <span className="text-[11px] text-muted">
+                          {q ? fmtDateTime(q.updatedAt) : "—"}
+                        </span>
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </Table>
+            </div>
+            <div className="space-y-2 md:hidden">
+              {watched.map((c) => {
+                const q = quotes.get(c.id);
+                const dayPct =
+                  q?.price !== undefined && q?.prevClose
+                    ? ((q.price - q.prevClose) / q.prevClose) * 100
+                    : null;
+                const unread = unreadCounts.get(c.id) ?? 0;
+                return (
+                  <div
+                    key={c.id}
+                    className="rounded-lg border border-border bg-surface p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2">
+                        <WatchlistToggle companyId={c.id} watchlisted />
+                        <div>
+                          <Link
+                            href={`/companies/${c.id}`}
+                            className="font-medium text-ink hover:text-accent"
+                          >
+                            {c.ticker}
+                          </Link>
+                          <div className="text-[12px] text-muted">
+                            {c.name}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-[11px] text-muted">Dziś</div>
+                        <Delta pct={dayPct} />
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <Badge>{c.market}</Badge>
+                      <Badge tone="accent">{TYPE_LABELS[c.type] ?? c.type}</Badge>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                      <Field label="Kurs">
+                        {q ? (
+                          <>
+                            {fmtNumber(q.price)}{" "}
+                            <span className="text-muted">{c.currency}</span>
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </Field>
+                      <Field label="Nieprzeczytane newsy">
+                        {unread > 0 ? (
+                          <Link href={`/companies/${c.id}`}>
+                            <Badge tone="accent">{unread}</Badge>
+                          </Link>
+                        ) : (
+                          <span className="text-muted">0</span>
+                        )}
+                      </Field>
+                      <Field label="Aktualizacja">
+                        {q ? fmtDateTime(q.updatedAt) : "—"}
+                      </Field>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </Card>
     </div>
