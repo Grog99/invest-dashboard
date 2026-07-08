@@ -9,11 +9,17 @@ export function NewsFilter({ companies }: { companies: Company[] }) {
   const params = useSearchParams();
   const company = params.get("company") ?? "";
   const unread = params.get("unread") === "1";
+  const mine = params.get("mine") === "1";
 
-  const navigate = (nextCompany: string, nextUnread: boolean) => {
+  const navigate = (
+    nextCompany: string,
+    nextUnread: boolean,
+    nextMine: boolean
+  ) => {
     const q = new URLSearchParams();
     if (nextCompany) q.set("company", nextCompany);
     if (nextUnread) q.set("unread", "1");
+    if (nextMine) q.set("mine", "1");
     router.push(`/news${q.toString() ? `?${q}` : ""}`);
   };
 
@@ -21,7 +27,7 @@ export function NewsFilter({ companies }: { companies: Company[] }) {
     <div className="flex items-center gap-2">
       <Select
         value={company}
-        onChange={(e) => navigate(e.target.value, unread)}
+        onChange={(e) => navigate(e.target.value, unread, mine)}
         className="w-56"
       >
         <option value="">Wszystkie spółki</option>
@@ -35,10 +41,19 @@ export function NewsFilter({ companies }: { companies: Company[] }) {
         <input
           type="checkbox"
           checked={unread}
-          onChange={(e) => navigate(company, e.target.checked)}
+          onChange={(e) => navigate(company, e.target.checked, mine)}
           className="accent-accent"
         />
         tylko nieprzeczytane
+      </label>
+      <label className="flex cursor-pointer items-center gap-1.5 text-[12px] text-ink2">
+        <input
+          type="checkbox"
+          checked={mine}
+          onChange={(e) => navigate(company, unread, e.target.checked)}
+          className="accent-accent"
+        />
+        tylko moje spółki
       </label>
     </div>
   );

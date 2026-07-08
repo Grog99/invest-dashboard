@@ -12,18 +12,19 @@ export const dynamic = "force-dynamic";
 export default async function NewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ company?: string; unread?: string }>;
+  searchParams: Promise<{ company?: string; unread?: string; mine?: string }>;
 }) {
   const sp = await searchParams;
   const companyId = sp.company ? Number(sp.company) : undefined;
   const unreadOnly = sp.unread === "1";
+  const onlyMyCompanies = sp.mine === "1";
 
   const allCompanies = db
     .select()
     .from(companies)
     .orderBy(asc(companies.ticker))
     .all();
-  const news = listNews({ companyId, unreadOnly, limit: 50 });
+  const news = listNews({ companyId, unreadOnly, onlyMyCompanies, limit: 50 });
   const initialCursor =
     news.length === 50 ? encodeCursor(news[news.length - 1]) : null;
   // Czysta funkcja świeżo pobranych danych (bez Date.now()/Math.random() —
@@ -33,7 +34,7 @@ export default async function NewsPage({
   // (oba wołają router.refresh()). Wymusza pełny remount NewsInfiniteList ze
   // świeżą pierwszą porcją zamiast prób synchronizowania stanu klienckiego
   // z propsami po fakcie (patrz komentarz w NewsInfiniteList.tsx).
-  const listKey = `${companyId ?? "all"}-${unreadOnly ? 1 : 0}-${news
+  const listKey = `${companyId ?? "all"}-${unreadOnly ? 1 : 0}-${onlyMyCompanies ? 1 : 0}-${news
     .map((n) => `${n.id}:${n.read ? 1 : 0}`)
     .join(",")}`;
 
@@ -68,6 +69,7 @@ export default async function NewsPage({
             initialCursor={initialCursor}
             companyId={companyId}
             unreadOnly={unreadOnly}
+            onlyMyCompanies={onlyMyCompanies}
           />
         )}
       </Card>

@@ -7,7 +7,7 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
 // GET: kolejna porcja newsów (infinite scroll na /news) — kursor keyset
-// w parametrze `cursor`, respektuje filtry `company`/`unread`, `limit`
+// w parametrze `cursor`, respektuje filtry `company`/`unread`/`mine`, `limit`
 // zclampowany do [1, 100]. Zwraca { items, nextCursor }; nextCursor === null
 // oznacza koniec historii. Route Handler nie jest cache'owany domyślnie
 // (patrz node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md),
@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
   const companyParam = sp.get("company");
   const companyId = companyParam ? Number(companyParam) : undefined;
   const unreadOnly = sp.get("unread") === "1";
+  const onlyMyCompanies = sp.get("mine") === "1";
 
   const limitParam = sp.get("limit");
   const parsedLimit = limitParam ? Number(limitParam) : NaN;
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
     cursor = decoded;
   }
 
-  const items = listNews({ companyId, unreadOnly, limit, cursor });
+  const items = listNews({ companyId, unreadOnly, onlyMyCompanies, limit, cursor });
   const nextCursor =
     items.length === limit ? encodeCursor(items[items.length - 1]) : null;
 

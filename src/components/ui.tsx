@@ -88,9 +88,11 @@ export function Delta({
 export function Badge({
   children,
   tone = "neutral",
+  size = "sm",
 }: {
   children: ReactNode;
   tone?: "neutral" | "accent" | "pos" | "neg" | "warn";
+  size?: "sm" | "md";
 }) {
   const tones: Record<string, string> = {
     neutral: "bg-surface2 text-ink2 border-border2",
@@ -99,9 +101,13 @@ export function Badge({
     neg: "bg-neg/15 text-neg border-neg/30",
     warn: "bg-warn/15 text-warn border-warn/30",
   };
+  const sizes: Record<string, string> = {
+    sm: "px-1.5 py-0.5 text-[11px]",
+    md: "px-2 py-0.5 text-[12px]",
+  };
   return (
     <span
-      className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium ${tones[tone]}`}
+      className={`inline-flex items-center rounded-md border font-medium ${tones[tone]} ${sizes[size]}`}
     >
       {children}
     </span>

@@ -23,11 +23,13 @@ export function NewsInfiniteList({
   initialCursor,
   companyId,
   unreadOnly,
+  onlyMyCompanies,
 }: {
   initialItems: NewsListItem[];
   initialCursor: string | null;
   companyId?: number;
   unreadOnly: boolean;
+  onlyMyCompanies: boolean;
 }) {
   const [items, setItems] = useState(initialItems);
   const [cursor, setCursor] = useState(initialCursor);
@@ -45,6 +47,7 @@ export function NewsInfiniteList({
       const params = new URLSearchParams({ cursor, limit: "50" });
       if (companyId) params.set("company", String(companyId));
       if (unreadOnly) params.set("unread", "1");
+      if (onlyMyCompanies) params.set("mine", "1");
       const res = await fetch(`/api/news?${params.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as {
@@ -76,8 +79,7 @@ export function NewsInfiniteList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done, loading, cursor]);
 
-  async function toggleRead(item: NewsListItem) {
-    const nextRead = !item.read;
+  async function applyRead(item: NewsListItem, nextRead: boolean) {
     setBusyIds((prev) => new Set(prev).add(item.id));
     setItems((prev) =>
       unreadOnly && nextRead
@@ -91,6 +93,7 @@ export function NewsInfiniteList({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: item.id, read: nextRead }),
+        keepalive: true,
       });
     } finally {
       setBusyIds((prev) => {
@@ -99,6 +102,10 @@ export function NewsInfiniteList({
         return next;
       });
     }
+  }
+
+  async function toggleRead(item: NewsListItem) {
+    await applyRead(item, !item.read);
   }
 
   return (
@@ -111,6 +118,12 @@ export function NewsInfiniteList({
                 href={n.url}
                 target="_blank"
                 rel="noreferrer"
+                onClick={() => {
+                  if (!n.read) void applyRead(n, true);
+                }}
+                onAuxClick={(e) => {
+                  if (e.button === 1 && !n.read) void applyRead(n, true);
+                }}
                 className={`text-[13.5px] leading-snug hover:text-accent hover:underline ${n.read ? "text-ink2" : "font-medium text-ink"}`}
               >
                 {n.title}
@@ -123,11 +136,19 @@ export function NewsInfiniteList({
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
                 {n.sourceName && <span>{n.sourceName}</span>}
                 {n.publishedAt && <span>· {fmtDateTime(n.publishedAt)}</span>}
-                {n.companies.map((c) => (
-                  <Link key={c.id} href={`/companies/${c.id}`}>
-                    <Badge tone="accent">{c.ticker}</Badge>
-                  </Link>
-                ))}
+                {n.companies.length === 0 ? (
+                  <Badge size="md" tone="neutral">
+                    Ogólne
+                  </Badge>
+                ) : (
+                  n.companies.map((c) => (
+                    <Link key={c.id} href={`/companies/${c.id}`}>
+                      <Badge size="md" tone="accent">
+                        {c.ticker}
+                      </Badge>
+                    </Link>
+                  ))
+                )}
               </div>
             </div>
             <button
