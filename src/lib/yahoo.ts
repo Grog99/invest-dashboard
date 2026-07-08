@@ -23,6 +23,10 @@ export interface ChartResult {
 }
 
 function num(v: unknown): number | null {
+  // Uwaga: Number(null) === 0 (nie NaN!), więc bez tej bramki Yahoo'owe null-e
+  // w tablicach OHLC/close zamieniały się w 0 zamiast zostać odfiltrowane —
+  // stąd fałszywe świece z close=0 w bazie (patrz strażnik przy budowie bars).
+  if (v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -80,7 +84,11 @@ export async function fetchChart(
   const bars: DailyBar[] = [];
   for (let i = 0; i < timestamps.length; i++) {
     const close = num(quote.close?.[i]);
-    if (close === null) continue; // dni bez notowań
+    // Odrzucamy null (dzień bez notowań) ORAZ <= 0: Yahoo potrafi oddać 0/null
+    // na trailing-świecy bieżącej/nienotowanej sesji. Zerowy close psuł wycenę
+    // portfela (akcje × 0 = 0 zł na wykresie) oraz prev_close (dzienna zmiana =
+    // cała pozycja). Kurs akcji nigdy nie jest 0, więc 0 = brak danych.
+    if (close === null || close <= 0) continue;
     bars.push({
       date: toLocalDate(timestamps[i]),
       open: num(quote.open?.[i]),
