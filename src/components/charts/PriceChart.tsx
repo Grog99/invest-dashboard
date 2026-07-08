@@ -14,7 +14,7 @@ const RANGES = [
   { key: "MAX", months: null },
 ] as const;
 
-type RangeKey = (typeof RANGES)[number]["key"];
+export type RangeKey = (typeof RANGES)[number]["key"];
 
 const MODES = [
   { key: "line", label: "Linia" },
@@ -26,12 +26,16 @@ type ModeKey = (typeof MODES)[number]["key"];
 export function PriceChart({
   data,
   currency,
+  initialRange,
+  height = 300,
 }: {
   data: CandlePoint[];
   currency: string;
+  initialRange?: RangeKey;
+  height?: number;
 }) {
   const [mode, setMode] = useState<ModeKey>("line");
-  const [range, setRange] = useState<RangeKey>("1R");
+  const [range, setRange] = useState<RangeKey>(initialRange ?? "1R");
 
   const filtered = useMemo(() => {
     const def = RANGES.find((r) => r.key === range);
@@ -97,10 +101,10 @@ export function PriceChart({
         <AreaChart
           data={filtered.map((b) => ({ time: b.time, value: b.close }))}
           valueFormatter={fmt}
-          height={300}
+          height={height}
         />
       ) : (
-        <CandleChart data={filtered} valueFormatter={fmt} height={300} />
+        <CandleChart data={filtered} valueFormatter={fmt} height={height} />
       )}
     </div>
   );
