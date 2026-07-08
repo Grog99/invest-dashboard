@@ -8,7 +8,7 @@ import {
   quotesDaily,
   notes,
 } from "@/db";
-import { and, asc, desc, eq, gte } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte } from "drizzle-orm";
 import { computePortfolio } from "@/lib/portfolio";
 import { listNews } from "@/lib/news";
 import {
@@ -83,7 +83,9 @@ export default async function CompanyPage({
     .where(
       and(
         eq(quotesDaily.companyId, companyId),
-        gte(quotesDaily.date, fiveYearsAgo.toISOString().slice(0, 10))
+        gte(quotesDaily.date, fiveYearsAgo.toISOString().slice(0, 10)),
+        // Zerowe świece (glitch Yahoo) to śmieć — nigdy realne notowanie.
+        gt(quotesDaily.close, 0)
       )
     )
     .orderBy(asc(quotesDaily.date))

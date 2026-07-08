@@ -13,7 +13,7 @@ import {
   type Company,
   type Transaction,
 } from "@/db";
-import { and, asc, eq, gte } from "drizzle-orm";
+import { and, asc, eq, gt, gte } from "drizzle-orm";
 import { getFxRateBefore, getLatestFxRate } from "./nbp";
 
 export interface Holding {
@@ -415,7 +415,9 @@ export function portfolioValueHistory(
       }
       while (s.barIdx + 1 < s.bars.length && s.bars[s.barIdx + 1].date <= date) {
         s.barIdx++;
-        s.lastClose = s.bars[s.barIdx].close;
+        // Pomijamy zerowe/ujemne close (glitch Yahoo utrwalony w bazie) —
+        // przenosimy ostatni sensowny kurs zamiast zerować wartość portfela.
+        if (s.bars[s.barIdx].close > 0) s.lastClose = s.bars[s.barIdx].close;
       }
       if (s.shares > 1e-9 && s.lastClose !== null) {
         const fx = fxOnOrBefore(s.company.currency.toUpperCase(), date);
@@ -441,7 +443,13 @@ export function benchmarkCloseHistory(
   return db
     .select({ date: quotesDaily.date, close: quotesDaily.close })
     .from(quotesDaily)
-    .where(and(eq(quotesDaily.companyId, companyId), gte(quotesDaily.date, startISO)))
+    .where(
+      and(
+        eq(quotesDaily.companyId, companyId),
+        gte(quotesDaily.date, startISO),
+        gt(quotesDaily.close, 0)
+      )
+    )
     .orderBy(asc(quotesDaily.date))
     .all();
 }

@@ -10,7 +10,7 @@ import {
   quotesLatest,
   type Company,
 } from "@/db";
-import { and, eq, lt, desc, sql } from "drizzle-orm";
+import { and, eq, gt, lt, desc, sql } from "drizzle-orm";
 import { fetchChart } from "./yahoo";
 import { ensureFxRates } from "./nbp";
 import { nowISO, todayISO } from "./format";
@@ -26,7 +26,13 @@ function prevCloseFor(companyId: number, beforeDate: string): number | null {
     .select({ close: quotesDaily.close })
     .from(quotesDaily)
     .where(
-      and(eq(quotesDaily.companyId, companyId), lt(quotesDaily.date, beforeDate))
+      and(
+        eq(quotesDaily.companyId, companyId),
+        lt(quotesDaily.date, beforeDate),
+        // Zerowa świeca (glitch) nie może udawać poprzedniego zamknięcia —
+        // inaczej dzienna zmiana = (cena − 0) × akcje = cała wartość pozycji.
+        gt(quotesDaily.close, 0)
+      )
     )
     .orderBy(desc(quotesDaily.date))
     .limit(1)
