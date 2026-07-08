@@ -42,6 +42,12 @@ import { NewsReadToggle } from "@/components/NewsActions";
 
 export const dynamic = "force-dynamic";
 
+const TYPE_LABELS: Record<string, string> = {
+  STOCK: "Akcje",
+  ETF: "ETF",
+  INDEX: "Indeks",
+};
+
 export default async function CompanyPage({
   params,
 }: {
@@ -104,6 +110,8 @@ export default async function CompanyPage({
     .from(companies)
     .orderBy(asc(companies.ticker))
     .all();
+  // Indeksy są tylko obserwowane — nie mogą być spółką transakcji.
+  const transactableCompanies = allCompanies.filter((c) => c.type !== "INDEX");
 
   const dayPct =
     quote?.price !== undefined && quote?.prevClose
@@ -116,6 +124,7 @@ export default async function CompanyPage({
         title={`${company.ticker} — ${company.name}`}
         sub={
           <span className="inline-flex items-center gap-1.5">
+            <Badge tone="accent">{TYPE_LABELS[company.type] ?? company.type}</Badge>
             <Badge>{company.market}</Badge>
             <Badge>{company.currency}</Badge>
             <Badge tone="neutral">Symbol: {company.quoteSymbol}</Badge>
@@ -184,6 +193,8 @@ export default async function CompanyPage({
               }
             />
           </>
+        ) : company.type === "INDEX" ? (
+          <StatTile label="Status" value="Indeks — obserwacja" />
         ) : (
           <StatTile
             label="Status"
@@ -211,60 +222,62 @@ export default async function CompanyPage({
 
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <div className="space-y-4">
-          <Card
-            title={`Transakcje (${companyTx.length})`}
-            actions={
-              <TransactionModalButton
-                companies={allCompanies}
-                defaultCompanyId={company.id}
-                label="+ Dodaj"
-                size="sm"
-                variant="secondary"
-              />
-            }
-          >
-            {companyTx.length === 0 ? (
-              <EmptyState title="Brak transakcji" />
-            ) : (
-              <Table
-                head={
-                  <>
-                    <Th>Data</Th>
-                    <Th>Typ</Th>
-                    <Th right>Ilość</Th>
-                    <Th right>Cena</Th>
-                    <Th />
-                  </>
-                }
-              >
-                {companyTx.map((t) => (
-                  <tr key={t.id}>
-                    <Td>{fmtDate(t.date)}</Td>
-                    <Td>
-                      <Badge tone={t.type === "BUY" ? "pos" : "neg"}>
-                        {t.type === "BUY" ? "Kupno" : "Sprzedaż"}
-                      </Badge>
-                    </Td>
-                    <Td right>{fmtQty(t.quantity)}</Td>
-                    <Td right>{fmtNumber(t.price)}</Td>
-                    <Td right>
-                      <span className="inline-flex items-center gap-1">
-                        <TransactionEditButton
-                          companies={allCompanies}
-                          transaction={t}
-                        />
-                        <DeleteButton
-                          url={`/api/transactions/${t.id}`}
-                          confirmText="Usunąć transakcję?"
-                          iconOnly
-                        />
-                      </span>
-                    </Td>
-                  </tr>
-                ))}
-              </Table>
-            )}
-          </Card>
+          {company.type !== "INDEX" && (
+            <Card
+              title={`Transakcje (${companyTx.length})`}
+              actions={
+                <TransactionModalButton
+                  companies={transactableCompanies}
+                  defaultCompanyId={company.id}
+                  label="+ Dodaj"
+                  size="sm"
+                  variant="secondary"
+                />
+              }
+            >
+              {companyTx.length === 0 ? (
+                <EmptyState title="Brak transakcji" />
+              ) : (
+                <Table
+                  head={
+                    <>
+                      <Th>Data</Th>
+                      <Th>Typ</Th>
+                      <Th right>Ilość</Th>
+                      <Th right>Cena</Th>
+                      <Th />
+                    </>
+                  }
+                >
+                  {companyTx.map((t) => (
+                    <tr key={t.id}>
+                      <Td>{fmtDate(t.date)}</Td>
+                      <Td>
+                        <Badge tone={t.type === "BUY" ? "pos" : "neg"}>
+                          {t.type === "BUY" ? "Kupno" : "Sprzedaż"}
+                        </Badge>
+                      </Td>
+                      <Td right>{fmtQty(t.quantity)}</Td>
+                      <Td right>{fmtNumber(t.price)}</Td>
+                      <Td right>
+                        <span className="inline-flex items-center gap-1">
+                          <TransactionEditButton
+                            companies={allCompanies}
+                            transaction={t}
+                          />
+                          <DeleteButton
+                            url={`/api/transactions/${t.id}`}
+                            confirmText="Usunąć transakcję?"
+                            iconOnly
+                          />
+                        </span>
+                      </Td>
+                    </tr>
+                  ))}
+                </Table>
+              )}
+            </Card>
+          )}
 
           <Card title="Newsy o spółce">
             {news.length === 0 ? (

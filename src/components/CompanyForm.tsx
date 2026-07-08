@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "./Modal";
 import { Button, Input, Label, Select } from "./ui";
 import type { Company } from "@/db/schema";
+import { suggestQuoteSymbol } from "@/lib/yahoo";
 
 export function CompanyModalButton({
   company,
@@ -30,6 +31,7 @@ export function CompanyModalButton({
   const [currency, setCurrency] = useState(company?.currency ?? "PLN");
   const [quoteSymbol, setQuoteSymbol] = useState(company?.quoteSymbol ?? "");
   const [aliases, setAliases] = useState(company?.aliases ?? "");
+  const [type, setType] = useState(company?.type ?? "STOCK");
   const [watchlist, setWatchlist] = useState(
     company ? company.watchlist === 1 : defaultWatchlist
   );
@@ -39,12 +41,15 @@ export function CompanyModalButton({
     if (!company) setCurrency(m === "US" ? "USD" : "PLN");
   };
 
+  // Auto-watchlista: wybór typu Indeks przy tworzeniu nowej spółki domyślnie
+  // zaznacza obserwację (indeks nie ma pozycji, więc watchlist to jedyny sens).
+  const onTypeChange = (t: string) => {
+    setType(t);
+    if (!company && t === "INDEX") setWatchlist(true);
+  };
+
   const suggestedSymbol =
-    ticker.trim() !== ""
-      ? market === "GPW"
-        ? `${ticker.trim().toUpperCase()}.WA`
-        : ticker.trim().toUpperCase()
-      : "";
+    ticker.trim() !== "" ? suggestQuoteSymbol(ticker, market, type) : "";
 
   const save = async () => {
     setBusy(true);
@@ -57,6 +62,7 @@ export function CompanyModalButton({
         currency,
         quoteSymbol: quoteSymbol || suggestedSymbol,
         aliases,
+        type,
         watchlist,
       };
       const res = await fetch(
@@ -93,7 +99,7 @@ export function CompanyModalButton({
         title={company ? `Edytuj: ${company.ticker}` : "Dodaj spółkę"}
       >
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <Label htmlFor="cf-ticker">Ticker</Label>
               <Input
@@ -113,6 +119,18 @@ export function CompanyModalButton({
                 <option value="GPW">GPW</option>
                 <option value="US">USA</option>
                 <option value="OTHER">Inny</option>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="cf-type">Typ</Label>
+              <Select
+                id="cf-type"
+                value={type}
+                onChange={(e) => onTypeChange(e.target.value)}
+              >
+                <option value="STOCK">Akcje</option>
+                <option value="ETF">ETF</option>
+                <option value="INDEX">Indeks</option>
               </Select>
             </div>
           </div>
@@ -145,6 +163,14 @@ export function CompanyModalButton({
               />
             </div>
           </div>
+          {type === "INDEX" && (
+            <p className="text-[11px] leading-relaxed text-muted">
+              Indeks = tylko podgląd (wykres + watchlista), bez pozycji. GPW:{" "}
+              <code>WIG.WA</code>, USA: <code>^GSPC</code>. Uwaga: WIG20 nie ma
+              historii na Yahoo — dla ekspozycji na WIG20 wybierz typ ETF i
+              symbol <code>ETFBW20TR.WA</code>.
+            </p>
+          )}
           <div>
             <Label htmlFor="cf-aliases">
               Aliasy do dopasowania newsów (po przecinku)

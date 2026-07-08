@@ -30,6 +30,8 @@ export default function PortfolioPage() {
     .from(companies)
     .orderBy(asc(companies.ticker))
     .all();
+  // Indeksy są tylko obserwowane — nie mogą być spółką transakcji/dywidendy.
+  const transactableCompanies = allCompanies.filter((c) => c.type !== "INDEX");
   const allTx = db
     .select()
     .from(transactions)
@@ -46,16 +48,16 @@ export default function PortfolioPage() {
           <>
             <RefreshQuotesButton />
             <CompanyModalButton label="+ Spółka" variant="secondary" size="sm" />
-            {allCompanies.length > 0 && (
+            {transactableCompanies.length > 0 && (
               <>
                 <DividendModalButton
-                  companies={allCompanies}
+                  companies={transactableCompanies}
                   label="+ Dywidenda"
                   variant="secondary"
                   size="sm"
                 />
                 <TransactionModalButton
-                  companies={allCompanies}
+                  companies={transactableCompanies}
                   label="+ Transakcja"
                   size="sm"
                 />

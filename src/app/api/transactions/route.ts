@@ -33,6 +33,15 @@ export async function POST(req: NextRequest) {
   if (!company) {
     return NextResponse.json({ error: "Nie znaleziono spółki." }, { status: 404 });
   }
+  if (company.type === "INDEX") {
+    return NextResponse.json(
+      {
+        error:
+          "Nie można dodać transakcji dla indeksu — indeks jest tylko obserwowany (wykres + watchlista), bez pozycji.",
+      },
+      { status: 400 }
+    );
+  }
 
   // Kurs D-1 potrzebny do przeliczeń PLN — dociągamy od razu.
   try {
