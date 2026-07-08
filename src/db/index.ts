@@ -293,7 +293,27 @@ const globalForDb = globalThis as unknown as {
   __investDb?: BetterSQLite3Database<typeof schema>;
 };
 
-export const db = globalForDb.__investDb ?? createDb();
-globalForDb.__investDb = db;
+function getDb(): BetterSQLite3Database<typeof schema> {
+  return (globalForDb.__investDb ??= createDb());
+}
+
+// LENIWA inicjalizacja przez Proxy: samo zaimportowanie tego modułu NIE otwiera
+// bazy — createDb() (mkdir + open + BOOTSTRAP + migracje) odpala się dopiero przy
+// pierwszym realnym użyciu, np. db.select(...). Powód: `next build` zbiera dane
+// stron w kilku równoległych procesach roboczych; przy eager-init KAŻDY z nich
+// importował ten moduł i tworzył od zera TEN SAM plik SQLite → wyścig o blokadę
+// zapisu = "SqliteError: database is locked" (SQLITE_BUSY_SNAPSHOT) i wywalony
+// build. Wszystkie trasy czytające bazę są `force-dynamic` / to runtime'owe
+// route-handlery, więc podczas builda nikt nie dotyka bazy — plik powstaje
+// dopiero w runtime (pojedynczy proces serwera, przez instrumentation.ts).
+export const db = new Proxy({} as BetterSQLite3Database<typeof schema>, {
+  get(_target, prop) {
+    const real = getDb() as unknown as Record<string | symbol, unknown>;
+    const value = real[prop];
+    return typeof value === "function"
+      ? (value as (...args: unknown[]) => unknown).bind(real)
+      : value;
+  },
+});
 
 export * from "./schema";
