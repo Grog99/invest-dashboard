@@ -84,7 +84,7 @@ export function AiChat({
               ) : (
                 <div className="mr-2">
                   {m.content ? (
-                    <Markdown>{m.content}</Markdown>
+                    <Markdown embedCharts={!busy}>{m.content}</Markdown>
                   ) : (
                     <span className="text-[13px] text-muted">Myślę…</span>
                   )}
