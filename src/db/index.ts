@@ -5,7 +5,7 @@ import path from "node:path";
 import * as schema from "./schema";
 import { computeDedupKey } from "../lib/format";
 
-const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
+export const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "invest.db");
 
 const BOOTSTRAP_SQL = `
@@ -117,6 +117,16 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS note_attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  note_id INTEGER NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+  filename TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_note_attachments_note ON note_attachments(note_id);
 `;
 
 // Szybki, czysto odczytowy test "czy w ogóle jest coś do zrobienia" — pozwala

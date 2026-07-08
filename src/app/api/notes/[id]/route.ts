@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, notes } from "@/db";
+import { db, notes, noteAttachments } from "@/db";
 import { eq } from "drizzle-orm";
 import { nowISO } from "@/lib/format";
+import { attachmentPath } from "@/lib/attachments";
+import fs from "node:fs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -41,6 +43,26 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params;
-  db.delete(notes).where(eq(notes.id, Number(id))).run();
+  const noteId = Number(id);
+
+  // Zbieramy id załączników PRZED usunięciem notatki — po delete FK ON DELETE
+  // CASCADE sprząta wiersze note_attachments, więc id trzeba mieć już w
+  // pamięci, żeby skasować odpowiadające im pliki z dysku.
+  const attachments = db
+    .select({ id: noteAttachments.id })
+    .from(noteAttachments)
+    .where(eq(noteAttachments.noteId, noteId))
+    .all();
+
+  db.delete(notes).where(eq(notes.id, noteId)).run();
+
+  for (const a of attachments) {
+    try {
+      fs.unlinkSync(attachmentPath(a.id));
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
