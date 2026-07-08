@@ -225,16 +225,21 @@ export function PageHeader({
   title,
   sub,
   actions,
+  icon,
 }: {
   title: string;
   sub?: ReactNode;
   actions?: ReactNode;
+  icon?: ReactNode;
 }) {
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
-        {sub && <p className="mt-0.5 text-[12px] text-muted">{sub}</p>}
+      <div className="flex items-center gap-3">
+        {icon}
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+          {sub && <p className="mt-0.5 text-[12px] text-muted">{sub}</p>}
+        </div>
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>

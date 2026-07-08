@@ -40,6 +40,8 @@ import { WatchlistToggle } from "@/components/WatchlistToggle";
 import { PriceChart } from "@/components/charts/PriceChart";
 import { AiChat } from "@/components/AiChat";
 import { NewsReadToggle } from "@/components/NewsActions";
+import { CompanyLogo } from "@/components/CompanyLogo";
+import { getLogoFlags } from "@/lib/logos";
 
 export const dynamic = "force-dynamic";
 
@@ -120,10 +122,20 @@ export default async function CompanyPage({
     quote?.price !== undefined && quote?.prevClose
       ? ((quote.price - quote.prevClose) / quote.prevClose) * 100
       : null;
+  const hasLogo = getLogoFlags([company.id]).get(company.id) ?? false;
 
   return (
     <div>
       <PageHeader
+        icon={
+          <CompanyLogo
+            ticker={company.ticker}
+            name={company.name}
+            companyId={company.id}
+            hasLogo={hasLogo}
+            size="md"
+          />
+        }
         title={`${company.ticker} — ${company.name}`}
         sub={
           <span className="inline-flex flex-wrap items-center gap-1.5">

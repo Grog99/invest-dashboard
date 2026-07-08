@@ -20,6 +20,8 @@ import { TransactionModalButton } from "@/components/TransactionForm";
 import { DividendModalButton } from "@/components/DividendForm";
 import { DeleteButton } from "@/components/DeleteButton";
 import { TransactionEditButton } from "@/components/TransactionEditButton";
+import { CompanyLogo } from "@/components/CompanyLogo";
+import { getLogoFlags } from "@/lib/logos";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,7 @@ export default function PortfolioPage() {
     .orderBy(desc(transactions.date), desc(transactions.id))
     .all();
   const companyById = new Map(allCompanies.map((c) => [c.id, c]));
+  const logoFlags = getLogoFlags(allCompanies.map((c) => c.id));
 
   return (
     <div>
@@ -108,14 +111,24 @@ export default function PortfolioPage() {
                 {summary.holdings.map((h) => (
                   <tr key={h.company.id} className="hover:bg-surface2/40">
                     <Td>
-                      <Link
-                        href={`/companies/${h.company.id}`}
-                        className="font-medium text-ink hover:text-accent"
-                      >
-                        {h.company.ticker}
-                      </Link>
-                      <span className="ml-2 hidden text-[12px] text-muted lg:inline">
-                        {h.company.name}
+                      <span className="inline-flex items-center gap-2">
+                        <CompanyLogo
+                          ticker={h.company.ticker}
+                          name={h.company.name}
+                          companyId={h.company.id}
+                          hasLogo={logoFlags.get(h.company.id) ?? false}
+                        />
+                        <span>
+                          <Link
+                            href={`/companies/${h.company.id}`}
+                            className="font-medium text-ink hover:text-accent"
+                          >
+                            {h.company.ticker}
+                          </Link>
+                          <span className="ml-2 hidden text-[12px] text-muted lg:inline">
+                            {h.company.name}
+                          </span>
+                        </span>
                       </span>
                     </Td>
                     <Td right>{fmtQty(h.shares)}</Td>
@@ -151,15 +164,23 @@ export default function PortfolioPage() {
                   className="rounded-lg border border-border bg-surface p-3"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <Link
-                        href={`/companies/${h.company.id}`}
-                        className="font-medium text-ink hover:text-accent"
-                      >
-                        {h.company.ticker}
-                      </Link>
-                      <div className="truncate text-[12px] text-muted">
-                        {h.company.name}
+                    <div className="flex min-w-0 items-start gap-2">
+                      <CompanyLogo
+                        ticker={h.company.ticker}
+                        name={h.company.name}
+                        companyId={h.company.id}
+                        hasLogo={logoFlags.get(h.company.id) ?? false}
+                      />
+                      <div className="min-w-0">
+                        <Link
+                          href={`/companies/${h.company.id}`}
+                          className="font-medium text-ink hover:text-accent"
+                        >
+                          {h.company.ticker}
+                        </Link>
+                        <div className="truncate text-[12px] text-muted">
+                          {h.company.name}
+                        </div>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
@@ -285,12 +306,20 @@ export default function PortfolioPage() {
                 <tr key={i}>
                   <Td>{fmtDate(s.date)}</Td>
                   <Td>
-                    <Link
-                      href={`/companies/${s.companyId}`}
-                      className="font-medium hover:text-accent"
-                    >
-                      {s.ticker}
-                    </Link>
+                    <span className="inline-flex items-center gap-2">
+                      <CompanyLogo
+                        ticker={s.ticker}
+                        name={companyById.get(s.companyId)?.name ?? s.ticker}
+                        companyId={s.companyId}
+                        hasLogo={logoFlags.get(s.companyId) ?? false}
+                      />
+                      <Link
+                        href={`/companies/${s.companyId}`}
+                        className="font-medium hover:text-accent"
+                      >
+                        {s.ticker}
+                      </Link>
+                    </span>
                   </Td>
                   <Td right>{fmtQty(s.quantity)}</Td>
                   <Td right>
@@ -318,15 +347,23 @@ export default function PortfolioPage() {
                 className="rounded-lg border border-border bg-surface p-3"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <Link
-                      href={`/companies/${s.companyId}`}
-                      className="font-medium hover:text-accent"
-                    >
-                      {s.ticker}
-                    </Link>
-                    <div className="text-[12px] text-muted">
-                      {fmtDate(s.date)}
+                  <div className="flex items-start gap-2">
+                    <CompanyLogo
+                      ticker={s.ticker}
+                      name={companyById.get(s.companyId)?.name ?? s.ticker}
+                      companyId={s.companyId}
+                      hasLogo={logoFlags.get(s.companyId) ?? false}
+                    />
+                    <div>
+                      <Link
+                        href={`/companies/${s.companyId}`}
+                        className="font-medium hover:text-accent"
+                      >
+                        {s.ticker}
+                      </Link>
+                      <div className="text-[12px] text-muted">
+                        {fmtDate(s.date)}
+                      </div>
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
@@ -374,7 +411,15 @@ export default function PortfolioPage() {
                 <tr key={i}>
                   <Td>{fmtDate(d.date)}</Td>
                   <Td>
-                    <span className="font-medium">{d.ticker}</span>
+                    <span className="inline-flex items-center gap-2">
+                      <CompanyLogo
+                        ticker={d.ticker}
+                        name={companyById.get(d.companyId)?.name ?? d.ticker}
+                        companyId={d.companyId}
+                        hasLogo={logoFlags.get(d.companyId) ?? false}
+                      />
+                      <span className="font-medium">{d.ticker}</span>
+                    </span>
                   </Td>
                   <Td right>
                     {fmtNumber(d.amount)}{" "}
@@ -411,10 +456,18 @@ export default function PortfolioPage() {
                 className="rounded-lg border border-border bg-surface p-3"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="font-medium">{d.ticker}</span>
-                    <div className="text-[12px] text-muted">
-                      {fmtDate(d.date)}
+                  <div className="flex items-start gap-2">
+                    <CompanyLogo
+                      ticker={d.ticker}
+                      name={companyById.get(d.companyId)?.name ?? d.ticker}
+                      companyId={d.companyId}
+                      hasLogo={logoFlags.get(d.companyId) ?? false}
+                    />
+                    <div>
+                      <span className="font-medium">{d.ticker}</span>
+                      <div className="text-[12px] text-muted">
+                        {fmtDate(d.date)}
+                      </div>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-start gap-2">
@@ -475,7 +528,17 @@ export default function PortfolioPage() {
                     <tr key={t.id} className="hover:bg-surface2/40">
                       <Td>{fmtDate(t.date)}</Td>
                       <Td>
-                        <span className="font-medium">{c?.ticker ?? "?"}</span>
+                        <span className="inline-flex items-center gap-2">
+                          {c && (
+                            <CompanyLogo
+                              ticker={c.ticker}
+                              name={c.name}
+                              companyId={c.id}
+                              hasLogo={logoFlags.get(c.id) ?? false}
+                            />
+                          )}
+                          <span className="font-medium">{c?.ticker ?? "?"}</span>
+                        </span>
                       </Td>
                       <Td>
                         <Badge tone={t.type === "BUY" ? "pos" : "neg"}>
@@ -521,10 +584,20 @@ export default function PortfolioPage() {
                     className="rounded-lg border border-border bg-surface p-3"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="font-medium">{c?.ticker ?? "?"}</span>
-                        <div className="text-[12px] text-muted">
-                          {fmtDate(t.date)}
+                      <div className="flex items-start gap-2">
+                        {c && (
+                          <CompanyLogo
+                            ticker={c.ticker}
+                            name={c.name}
+                            companyId={c.id}
+                            hasLogo={logoFlags.get(c.id) ?? false}
+                          />
+                        )}
+                        <div>
+                          <span className="font-medium">{c?.ticker ?? "?"}</span>
+                          <div className="text-[12px] text-muted">
+                            {fmtDate(t.date)}
+                          </div>
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">

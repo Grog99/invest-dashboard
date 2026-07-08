@@ -17,6 +17,8 @@ import { getSetting, SETTING_KEYS } from "@/lib/settings";
 import { db, companies } from "@/db";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { ReactNode } from "react";
+import { CompanyLogo } from "@/components/CompanyLogo";
+import { getLogoFlags } from "@/lib/logos";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +75,9 @@ export default function DashboardPage() {
   const summary = computePortfolio();
   const history = portfolioValueHistory(365);
   const news = listNews({ limit: 8 });
+  const newsLogoFlags = getLogoFlags(
+    [...new Set(news.flatMap((n) => n.companies.map((c) => c.id)))]
+  );
 
   const benchmarkId = Number(getSetting(SETTING_KEYS.dashboardBenchmark)) || null;
   const benchmarkCandidates = db
@@ -147,8 +152,14 @@ export default function DashboardPage() {
                   <Link
                     key={c.id}
                     href={`/companies/${c.id}`}
-                    className="normal-case tracking-normal"
+                    className="inline-flex items-center gap-1 normal-case tracking-normal"
                   >
+                    <CompanyLogo
+                      ticker={c.ticker}
+                      name={c.ticker}
+                      companyId={c.id}
+                      hasLogo={newsLogoFlags.get(c.id) ?? false}
+                    />
                     <Badge tone="accent">{c.ticker}</Badge>
                   </Link>
                 ))}

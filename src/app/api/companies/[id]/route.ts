@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, companies, quotesDaily, quotesLatest, INSTRUMENT_TYPES } from "@/db";
 import { eq } from "drizzle-orm";
 import { refreshQuotes } from "@/lib/quotes";
+import { refreshLogos } from "@/lib/logos";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -44,6 +45,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (INSTRUMENT_TYPES.includes(body.type)) {
     updates.type = body.type;
   }
+  if (body.domain !== undefined) {
+    updates.domain = String(body.domain ?? "").trim().toLowerCase() || null;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Brak zmian do zapisania." }, { status: 400 });
@@ -75,6 +79,15 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     } catch (e) {
       refreshError = e instanceof Error ? e.message : String(e);
     }
+  }
+
+  // Logo — best-effort, nieblokujące (wzorzec refreshQuotes powyżej).
+  // Odpalane przy każdym PATCH (nie tylko zmiana symbolu), bo zmiana
+  // `domain`/`name` też wpływa na resolveLogo().
+  try {
+    await refreshLogos([companyId]);
+  } catch {
+    // ignorujemy — logo można dociągnąć później przy "Odśwież ceny"
   }
 
   return NextResponse.json({ company: updated, refreshError });

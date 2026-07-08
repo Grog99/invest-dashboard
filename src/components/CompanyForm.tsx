@@ -31,6 +31,7 @@ export function CompanyModalButton({
   const [currency, setCurrency] = useState(company?.currency ?? "PLN");
   const [quoteSymbol, setQuoteSymbol] = useState(company?.quoteSymbol ?? "");
   const [aliases, setAliases] = useState(company?.aliases ?? "");
+  const [domain, setDomain] = useState(company?.domain ?? "");
   const [type, setType] = useState(company?.type ?? "STOCK");
   const [watchlist, setWatchlist] = useState(
     company ? company.watchlist === 1 : defaultWatchlist
@@ -62,6 +63,7 @@ export function CompanyModalButton({
         currency,
         quoteSymbol: quoteSymbol || suggestedSymbol,
         aliases,
+        domain,
         type,
         watchlist,
       };
@@ -181,6 +183,19 @@ export function CompanyModalButton({
               onChange={(e) => setAliases(e.target.value)}
               placeholder="np. Orlen, PKN Orlen"
             />
+          </div>
+          <div>
+            <Label htmlFor="cf-domain">Domena (logo spółki)</Label>
+            <Input
+              id="cf-domain"
+              value={domain ?? ""}
+              onChange={(e) => setDomain(e.target.value)}
+              placeholder="orlen.pl"
+            />
+            <p className="mt-1 text-[11px] leading-relaxed text-muted">
+              Opcjonalna — jeśli pusta, logo próbujemy dobrać automatycznie po
+              tickerze/nazwie.
+            </p>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink2">
             <input

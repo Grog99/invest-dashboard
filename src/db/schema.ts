@@ -23,6 +23,10 @@ export const companies = sqliteTable("companies", {
   // Dodatkowe słowa kluczowe (po przecinku) do dopasowywania newsów, np. "Orlen,PKN Orlen"
   aliases: text("aliases"),
   type: text("type").notNull().default("STOCK"), // STOCK | ETF | INDEX
+  // Domena spółki (np. "orlen.pl") — klucz łańcucha logo (src/lib/logos.ts).
+  // Nullable: gdy puste, resolveLogo() spada na TICKER_DOMAINS albo Wikidata
+  // po nazwie. Patrz docs/plans/ikonki-spolek.md.
+  domain: text("domain"),
   createdAt: text("created_at").notNull(),
 });
 
@@ -169,6 +173,22 @@ export const noteAttachments = sqliteTable("note_attachments", {
   createdAt: text("created_at").notNull(),
 });
 
+// Status/cache logo spółek — jeden wiersz na spółkę, plik bajtów na dysku w
+// data/logos/{companyId} (src/lib/logos.ts). source = "NONE" to zapamiętany
+// negatywny wynik (żaden krok łańcucha nie zwrócił obrazu) — rekord istnieje
+// zawsze po pierwszej próbie resolveLogo(), żeby nie bić w zewnętrzne API co
+// render/refresh (TTL w checkedAt, patrz refreshLogos()).
+export const companyLogos = sqliteTable("company_logos", {
+  companyId: integer("company_id")
+    .primaryKey()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  source: text("source").notNull(), // BRANDFETCH | WIKIDATA | GOOGLE | NONE
+  mime: text("mime"),
+  size: integer("size"),
+  fetchedAt: text("fetched_at"),
+  checkedAt: text("checked_at").notNull(),
+});
+
 export type Company = typeof companies.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
 export type Dividend = typeof dividends.$inferSelect;
@@ -178,3 +198,4 @@ export type NewsSource = typeof newsSources.$inferSelect;
 export type NewsItem = typeof newsItems.$inferSelect;
 export type Note = typeof notes.$inferSelect;
 export type NoteAttachment = typeof noteAttachments.$inferSelect;
+export type CompanyLogo = typeof companyLogos.$inferSelect;
