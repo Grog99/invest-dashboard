@@ -9,6 +9,7 @@ import { useEffect, useRef } from "react";
 import {
   createChart,
   LineSeries,
+  LineStyle,
   ColorType,
   type IChartApi,
   type UTCTimestamp,
@@ -93,9 +94,12 @@ export function BenchmarkChart({
 
     // Bez priceScaleId: obie serie na wspólnej domyślnej prawej skali — ma
     // to sens, bo obie są znormalizowane do tej samej bazy 100 (nie PLN).
+    // Portfel = gruba linia atramentu; benchmark = wyraźnie inny kolor
+    // (cat-4) i przerywany styl, żeby serie się nie zlewały (paleta danych
+    // Rocznika, patrz globals.css).
     const portfolioSeries = chart.addSeries(LineSeries, {
-      color: colors.accent,
-      lineWidth: 2,
+      color: colors.ink,
+      lineWidth: 3,
       priceLineVisible: false,
       lastValueVisible: true,
     });
@@ -107,8 +111,9 @@ export function BenchmarkChart({
     );
 
     const benchmarkSeries = chart.addSeries(LineSeries, {
-      color: colors.cat3,
+      color: colors.cat4,
       lineWidth: 2,
+      lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: true,
     });
@@ -138,24 +143,26 @@ export function BenchmarkChart({
   return (
     <div>
       {/* Legenda ręczna — lightweight-charts jej nie ma. Kolory jako surowe
-          referencje `var(--color-*)`, NIE `colors.accent/cat3` z hooka: ten
+          referencje `var(--color-*)`, NIE `colors.ink/cat4` z hooka: ten
           hook zwraca podczas SSR zaszyty fallback (ciemny motyw), a po
           hydracji realną wartość z `getComputedStyle` — dwie różne wartości
           w tym samym atrybucie `style` to gwarantowany hydration mismatch.
           `var(...)` renderuje się identycznie na serwerze i kliencie;
-          przeglądarka rozwiązuje ją dopiero przy malowaniu. */}
-      <div className="mb-2 flex items-center gap-4 text-[11px] text-muted">
+          przeglądarka rozwiązuje ją dopiero przy malowaniu. Kreski (nie
+          kropki) odzwierciedlają styl linii na wykresie — ciągła/gruba dla
+          portfela, przerywana dla benchmarku. */}
+      <div className="mb-2 flex flex-wrap items-center gap-4 text-[11px] text-ink2">
         <span className="flex items-center gap-1.5">
           <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: "var(--color-accent)" }}
+            className="inline-block h-0 w-5 border-t-[2.5px]"
+            style={{ borderColor: "var(--color-ink)" }}
           />
           {portfolioLabel}
         </span>
         <span className="flex items-center gap-1.5">
           <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: "var(--color-cat-3)" }}
+            className="inline-block h-0 w-5 border-t-2 border-dashed"
+            style={{ borderColor: "var(--color-cat-4)" }}
           />
           {benchmarkLabel}
         </span>

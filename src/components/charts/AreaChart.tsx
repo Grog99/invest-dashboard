@@ -21,11 +21,16 @@ export interface AreaPoint {
 export function AreaChart({
   data,
   color,
+  colorToken = "accent",
   height = 280,
   valueFormatter,
 }: {
   data: AreaPoint[];
   color?: string;
+  // Token semantyczny użyty, gdy `color` nie jest podany — "ink" daje grubszą,
+  // atramentową linię (hero „Wartość portfela" w Rocznik), "accent" to
+  // dotychczasowe domyślne zachowanie (np. PriceChart na stronie spółki).
+  colorToken?: "accent" | "ink";
   height?: number;
   valueFormatter?: (value: number) => string;
 }) {
@@ -36,9 +41,11 @@ export function AreaChart({
     formatterRef.current = valueFormatter;
   }, [valueFormatter]);
   const colors = useThemeColors();
-  // Domyślny kolor serii = akcent motywu; przekazany `color` (jeśli jest)
-  // ma pierwszeństwo i nie zmienia się przy przełączeniu motywu.
-  const seriesColor = color ?? colors.accent;
+  // Domyślny kolor serii = akcent motywu (lub atrament dla `colorToken="ink"`);
+  // przekazany `color` (jeśli jest) ma pierwszeństwo i nie zmienia się przy
+  // przełączeniu motywu.
+  const seriesColor = color ?? (colorToken === "ink" ? colors.ink : colors.accent);
+  const lineWidth: 2 | 3 = colorToken === "ink" ? 3 : 2;
 
   // Mount-only: tworzy instancję wykresu. Kolory poziomu wykresu (siatka,
   // osie, crosshair) NIE są tu ustawiane na sztywno — zależą od motywu i
@@ -104,9 +111,11 @@ export function AreaChart({
 
     const series = chart.addSeries(AreaSeries, {
       lineColor: seriesColor,
-      lineWidth: 2,
-      topColor: `${seriesColor}40`,
-      bottomColor: `${seriesColor}05`,
+      lineWidth,
+      // Wash pod krzywą jest zawsze tonowany akcentem (nawet gdy sama linia
+      // jest atramentem) — spójny "podświetlony papier" pod hero-wykresem.
+      topColor: `${colors.accent}29`,
+      bottomColor: `${colors.accent}00`,
       priceLineVisible: false,
       lastValueVisible: true,
     });
@@ -126,7 +135,7 @@ export function AreaChart({
         // wykres mógł już zostać usunięty
       }
     };
-  }, [data, seriesColor]);
+  }, [data, seriesColor, lineWidth, colors.accent]);
 
   return <div ref={containerRef} style={{ height }} className="w-full" />;
 }

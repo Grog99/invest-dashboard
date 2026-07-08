@@ -124,7 +124,7 @@ export function NewsInfiniteList({
                 onAuxClick={(e) => {
                   if (e.button === 1 && !n.read) void applyRead(n, true);
                 }}
-                className={`text-[13.5px] leading-snug hover:text-accent hover:underline ${n.read ? "text-ink2" : "font-medium text-ink"}`}
+                className={`text-[13.5px] leading-snug hover:text-accent hover:underline ${n.read ? "font-medium text-ink2" : "font-semibold text-ink"}`}
               >
                 {n.title}
               </a>

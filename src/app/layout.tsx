@@ -29,8 +29,8 @@ export const metadata: Metadata = {
 // (zaakceptowane, patrz docs/plans/pwa-wersja-mobilna.md).
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d0d0d" },
+    { media: "(prefers-color-scheme: light)", color: "#f4ecdd" },
+    { media: "(prefers-color-scheme: dark)", color: "#191410" },
   ],
   viewportFit: "cover",
 };

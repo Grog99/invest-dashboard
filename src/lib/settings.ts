@@ -17,7 +17,9 @@ export const DEFAULT_CRON = {
   news: "*/30 * * * *",
 } as const;
 
-export const DEFAULT_THEME = "dark";
+// Rocznik: "Dzień" (jasny papier) zatwierdzony jako motyw domyślny.
+// Odwrócenie: zmień z powrotem na "dark".
+export const DEFAULT_THEME = "light";
 
 export function getSetting(key: string): string | null {
   const row = db.select().from(settings).where(eq(settings.key, key)).get();
