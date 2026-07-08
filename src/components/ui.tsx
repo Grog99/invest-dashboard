@@ -273,6 +273,23 @@ export function Th({
   );
 }
 
+// Para label/value w kartach mobilnych (widoki kartowe tabel na < md) —
+// współdzielony markup, żeby uniknąć powtórzenia w kilku plikach.
+export function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div>
+      <div className="text-[11px] text-muted">{label}</div>
+      <div className="text-[13px] text-ink">{children}</div>
+    </div>
+  );
+}
+
 export function Td({
   children,
   right = false,

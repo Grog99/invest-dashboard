@@ -29,6 +29,7 @@ import {
   Delta,
   Badge,
   EmptyState,
+  Field,
 } from "@/components/ui";
 import { RefreshQuotesButton } from "@/components/RefreshButtons";
 import { CompanyModalButton } from "@/components/CompanyForm";
@@ -125,7 +126,7 @@ export default async function CompanyPage({
       <PageHeader
         title={`${company.ticker} — ${company.name}`}
         sub={
-          <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex flex-wrap items-center gap-1.5">
             <Badge tone="accent">{TYPE_LABELS[company.type] ?? company.type}</Badge>
             <Badge>{company.market}</Badge>
             <Badge>{company.currency}</Badge>
@@ -240,43 +241,81 @@ export default async function CompanyPage({
               {companyTx.length === 0 ? (
                 <EmptyState title="Brak transakcji" />
               ) : (
-                <Table
-                  head={
-                    <>
-                      <Th>Data</Th>
-                      <Th>Typ</Th>
-                      <Th right>Ilość</Th>
-                      <Th right>Cena</Th>
-                      <Th />
-                    </>
-                  }
-                >
-                  {companyTx.map((t) => (
-                    <tr key={t.id}>
-                      <Td>{fmtDate(t.date)}</Td>
-                      <Td>
-                        <Badge tone={t.type === "BUY" ? "pos" : "neg"}>
-                          {t.type === "BUY" ? "Kupno" : "Sprzedaż"}
-                        </Badge>
-                      </Td>
-                      <Td right>{fmtQty(t.quantity)}</Td>
-                      <Td right>{fmtNumber(t.price)}</Td>
-                      <Td right>
-                        <span className="inline-flex items-center gap-1">
-                          <TransactionEditButton
-                            companies={allCompanies}
-                            transaction={t}
-                          />
-                          <DeleteButton
-                            url={`/api/transactions/${t.id}`}
-                            confirmText="Usunąć transakcję?"
-                            iconOnly
-                          />
-                        </span>
-                      </Td>
-                    </tr>
-                  ))}
-                </Table>
+                <>
+                  <div className="hidden md:block">
+                    <Table
+                      head={
+                        <>
+                          <Th>Data</Th>
+                          <Th>Typ</Th>
+                          <Th right>Ilość</Th>
+                          <Th right>Cena</Th>
+                          <Th />
+                        </>
+                      }
+                    >
+                      {companyTx.map((t) => (
+                        <tr key={t.id}>
+                          <Td>{fmtDate(t.date)}</Td>
+                          <Td>
+                            <Badge tone={t.type === "BUY" ? "pos" : "neg"}>
+                              {t.type === "BUY" ? "Kupno" : "Sprzedaż"}
+                            </Badge>
+                          </Td>
+                          <Td right>{fmtQty(t.quantity)}</Td>
+                          <Td right>{fmtNumber(t.price)}</Td>
+                          <Td right>
+                            <span className="inline-flex items-center gap-1">
+                              <TransactionEditButton
+                                companies={allCompanies}
+                                transaction={t}
+                              />
+                              <DeleteButton
+                                url={`/api/transactions/${t.id}`}
+                                confirmText="Usunąć transakcję?"
+                                iconOnly
+                              />
+                            </span>
+                          </Td>
+                        </tr>
+                      ))}
+                    </Table>
+                  </div>
+                  <div className="space-y-2 md:hidden">
+                    {companyTx.map((t) => (
+                      <div
+                        key={t.id}
+                        className="rounded-lg border border-border bg-surface p-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <Badge tone={t.type === "BUY" ? "pos" : "neg"}>
+                              {t.type === "BUY" ? "Kupno" : "Sprzedaż"}
+                            </Badge>
+                            <div className="mt-1 text-[12px] text-muted">
+                              {fmtDate(t.date)}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <TransactionEditButton
+                              companies={allCompanies}
+                              transaction={t}
+                            />
+                            <DeleteButton
+                              url={`/api/transactions/${t.id}`}
+                              confirmText="Usunąć transakcję?"
+                              iconOnly
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                          <Field label="Ilość">{fmtQty(t.quantity)}</Field>
+                          <Field label="Cena">{fmtNumber(t.price)}</Field>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </Card>
           )}

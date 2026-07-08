@@ -3,21 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
-
-const NAV = [
-  { href: "/", label: "Dashboard", icon: "◧" },
-  { href: "/portfolio", label: "Portfel", icon: "▤" },
-  { href: "/watchlist", label: "Watchlista", icon: "◎" },
-  { href: "/news", label: "Newsy", icon: "☰" },
-  { href: "/research", label: "Research", icon: "✎" },
-  { href: "/settings", label: "Ustawienia", icon: "⚙" },
-];
+import { NAV } from "./nav";
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 flex h-screen w-52 shrink-0 flex-col border-r border-border bg-surface">
+    <aside className="sticky top-0 hidden h-screen w-52 shrink-0 flex-col border-r border-border bg-surface md:flex">
       <div className="px-5 pb-4 pt-6">
         <Link href="/" className="block">
           <div className="text-[15px] font-semibold tracking-tight">
