@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, companies, INSTRUMENT_TYPES } from "@/db";
 import { suggestQuoteSymbol } from "@/lib/yahoo";
 import { refreshQuotes } from "@/lib/quotes";
+import { refreshLogos } from "@/lib/logos";
 import { nowISO } from "@/lib/format";
 
 export async function GET() {
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
     String(body.quoteSymbol ?? "").trim().toUpperCase() ||
     suggestQuoteSymbol(ticker, market, type);
   const aliases = String(body.aliases ?? "").trim() || null;
+  const domain = String(body.domain ?? "").trim().toLowerCase() || null;
 
   if (!ticker || !name) {
     return NextResponse.json(
@@ -44,6 +46,7 @@ export async function POST(req: NextRequest) {
       watchlist: body.watchlist ? 1 : 0,
       aliases,
       type,
+      domain,
       createdAt: nowISO(),
     })
     .returning()
@@ -58,6 +61,14 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) {
     refreshError = e instanceof Error ? e.message : String(e);
+  }
+
+  // Logo — best-effort, nieblokujące (wzorzec refreshQuotes powyżej); błąd
+  // sieci/API nie może uniemożliwić utworzenia spółki.
+  try {
+    await refreshLogos([created.id]);
+  } catch {
+    // ignorujemy — logo można dociągnąć później przy "Odśwież ceny"
   }
 
   return NextResponse.json({ company: created, refreshError });

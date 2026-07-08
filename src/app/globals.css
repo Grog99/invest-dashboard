@@ -41,6 +41,9 @@
   --color-cat-7: #8fa6b4;
   --color-cat-8: #c08a64;
   --color-cat-other: #b6a88c;
+  /* Tekst na tle --color-cat-* (awatary spółek bez logo, CompanyLogo.tsx) —
+     paleta kategoryczna w Wieczorze jest jasna/średnia, więc ciemny tekst. */
+  --color-cat-ink: #1c1712;
 }
 
 /* Motyw jasny („Rocznik" — Dzień, ciepły papier) — nadpisanie tych samych
@@ -73,6 +76,9 @@
   --color-cat-7: #566b7a;
   --color-cat-8: #8a5a3c;
   --color-cat-other: #9b8e76;
+  /* W Dniu paleta kategoryczna jest ciemniejsza (dobrana pod donut na jasnym
+     tle) — tekst awatarów musi być jasny, odwrotnie niż w Wieczorze. */
+  --color-cat-ink: #fbf5e9;
 }
 
 /* Aliasy dla generatora utility Tailwinda — `inline`, żeby emitować

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS companies (
   watchlist INTEGER NOT NULL DEFAULT 0,
   aliases TEXT,
   type TEXT NOT NULL DEFAULT 'STOCK',
+  domain TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -127,6 +128,15 @@ CREATE TABLE IF NOT EXISTS note_attachments (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_note_attachments_note ON note_attachments(note_id);
+
+CREATE TABLE IF NOT EXISTS company_logos (
+  company_id INTEGER PRIMARY KEY REFERENCES companies(id) ON DELETE CASCADE,
+  source TEXT NOT NULL,
+  mime TEXT,
+  size INTEGER,
+  fetched_at TEXT,
+  checked_at TEXT NOT NULL
+);
 `;
 
 // Szybki, czysto odczytowy test "czy w ogóle jest coś do zrobienia" — pozwala
@@ -270,6 +280,36 @@ function migrateCompanyType(sqlite: Database.Database): void {
   migrate();
 }
 
+// Tani read-only guard (kalka needsCompanyTypeMigration powyżej) — samo
+// PRAGMA table_info nie zapisuje nic, więc N równoległych workerów `next
+// build` może je odpytać bez rywalizacji o blokadę zapisu WAL.
+function needsCompanyDomainMigration(sqlite: Database.Database): boolean {
+  const cols = sqlite.prepare(`PRAGMA table_info(companies)`).all() as {
+    name: string;
+  }[];
+  return !cols.some((c) => c.name === "domain");
+}
+
+// Jednorazowa (idempotentna) migracja: dokłada nullowalną kolumnę `domain` do
+// istniejących baz (świeże bazy dostają ją już z BOOTSTRAP_SQL). Kalka
+// migrateCompanyType() — jedyna różnica to brak DEFAULT/backfillu, bo kolumna
+// jest nullowalna (patrz docs/plans/ikonki-spolek.md, sekcja „Podejście" pkt 1).
+function migrateCompanyDomain(sqlite: Database.Database): void {
+  if (!needsCompanyDomainMigration(sqlite)) return;
+  const migrate = sqlite.transaction(() => {
+    // Re-sprawdzamy kolumnę WEWNĄTRZ transakcji zapisu — patrz komentarz przy
+    // migrateCompanyType() powyżej (ten sam wyścig równoległych workerów `next
+    // build` między read-only guardem a startem tej transakcji).
+    const cols = sqlite.prepare(`PRAGMA table_info(companies)`).all() as {
+      name: string;
+    }[];
+    if (!cols.some((c) => c.name === "domain")) {
+      sqlite.exec(`ALTER TABLE companies ADD COLUMN domain TEXT`);
+    }
+  });
+  migrate();
+}
+
 function createDb(): BetterSQLite3Database<typeof schema> {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const sqlite = new Database(DB_PATH);
@@ -285,6 +325,7 @@ function createDb(): BetterSQLite3Database<typeof schema> {
   sqlite.exec(BOOTSTRAP_SQL);
   migrateNewsDedup(sqlite);
   migrateCompanyType(sqlite);
+  migrateCompanyDomain(sqlite);
   return drizzle(sqlite, { schema });
 }
 

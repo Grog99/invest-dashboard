@@ -16,6 +16,8 @@ import {
 import { RefreshQuotesButton } from "@/components/RefreshButtons";
 import { CompanyModalButton } from "@/components/CompanyForm";
 import { WatchlistToggle } from "@/components/WatchlistToggle";
+import { CompanyLogo } from "@/components/CompanyLogo";
+import { getLogoFlags } from "@/lib/logos";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,7 @@ export default function WatchlistPage() {
   const quotes = new Map(
     db.select().from(quotesLatest).all().map((q) => [q.companyId, q])
   );
+  const logoFlags = getLogoFlags(watched.map((c) => c.id));
   const unreadCounts = new Map(
     db
       .select({
@@ -105,14 +108,24 @@ export default function WatchlistPage() {
                         <WatchlistToggle companyId={c.id} watchlisted />
                       </Td>
                       <Td>
-                        <Link
-                          href={`/companies/${c.id}`}
-                          className="font-medium text-ink hover:text-accent"
-                        >
-                          {c.ticker}
-                        </Link>
-                        <span className="ml-2 hidden text-[12px] text-muted lg:inline">
-                          {c.name}
+                        <span className="inline-flex items-center gap-2">
+                          <CompanyLogo
+                            ticker={c.ticker}
+                            name={c.name}
+                            companyId={c.id}
+                            hasLogo={logoFlags.get(c.id) ?? false}
+                          />
+                          <span>
+                            <Link
+                              href={`/companies/${c.id}`}
+                              className="font-medium text-ink hover:text-accent"
+                            >
+                              {c.ticker}
+                            </Link>
+                            <span className="ml-2 hidden text-[12px] text-muted lg:inline">
+                              {c.name}
+                            </span>
+                          </span>
                         </span>
                       </Td>
                       <Td>
@@ -171,6 +184,12 @@ export default function WatchlistPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-start gap-2">
                         <WatchlistToggle companyId={c.id} watchlisted />
+                        <CompanyLogo
+                          ticker={c.ticker}
+                          name={c.name}
+                          companyId={c.id}
+                          hasLogo={logoFlags.get(c.id) ?? false}
+                        />
                         <div>
                           <Link
                             href={`/companies/${c.id}`}
