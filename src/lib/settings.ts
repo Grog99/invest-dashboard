@@ -7,6 +7,7 @@ export const SETTING_KEYS = {
   cronQuotes: "cron_quotes",
   cronNews: "cron_news",
   theme: "theme",
+  dashboardBenchmark: "dashboard_benchmark_company_id",
 } as const;
 
 export const DEFAULT_MODEL = "anthropic/claude-sonnet-4.5";

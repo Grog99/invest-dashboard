@@ -13,7 +13,7 @@ import {
   type Company,
   type Transaction,
 } from "@/db";
-import { asc, eq, gte } from "drizzle-orm";
+import { and, asc, eq, gte } from "drizzle-orm";
 import { getFxRateBefore, getLatestFxRate } from "./nbp";
 
 export interface Holding {
@@ -425,4 +425,82 @@ export function portfolioValueHistory(
     series.push({ date, value: Math.round(total * 100) / 100 });
   }
   return series;
+}
+
+// Historia zamknięć jednej spółki — odpowiednik portfolioValueHistory dla
+// benchmarku: bez FIFO i bez FX, bo benchmark nie jest przeliczany na PLN
+// (porównanie w walucie natywnej, patrz normalizeComparison).
+export function benchmarkCloseHistory(
+  companyId: number,
+  days = 365
+): { date: string; close: number }[] {
+  const start = new Date();
+  start.setUTCDate(start.getUTCDate() - days);
+  const startISO = start.toISOString().slice(0, 10);
+
+  return db
+    .select({ date: quotesDaily.date, close: quotesDaily.close })
+    .from(quotesDaily)
+    .where(and(eq(quotesDaily.companyId, companyId), gte(quotesDaily.date, startISO)))
+    .orderBy(asc(quotesDaily.date))
+    .all();
+}
+
+export interface ComparisonSeries {
+  portfolio: { time: string; value: number }[];
+  benchmark: { time: string; value: number }[];
+  baseDate: string | null;
+  portfolioReturnPct: number | null;
+  benchmarkReturnPct: number | null;
+}
+
+const EMPTY_COMPARISON: ComparisonSeries = {
+  portfolio: [],
+  benchmark: [],
+  baseDate: null,
+  portfolioReturnPct: null,
+  benchmarkReturnPct: null,
+};
+
+// Normalizuje obie serie do bazy 100 na pierwszej dacie, na którą OBIE mają
+// sensowny (niezerowy) punkt: baseDate = max(pierwsza data, od której portfel
+// ma niezerową wartość, pierwsza data benchmarku). portfolio[0] to zawsze
+// początek okna 365 dni (portfolioValueHistory zwraca 0 dla dni sprzed
+// pierwszej transakcji), więc bazą NIE może być portfolio[0].date — trzeba
+// znaleźć pierwszy dzień z realną pozycją. Serie zostają na własnych datach
+// (lightweight-charts wyrównuje po czasie), tylko baza (dzielnik) jest
+// wspólnie ustalona. Brak nakładania się okresów (lub baza = 0) → obie serie
+// puste, żeby uniknąć dzielenia przez błędną/zerową wartość.
+export function normalizeComparison(
+  portfolio: { date: string; value: number }[],
+  benchmark: { date: string; close: number }[]
+): ComparisonSeries {
+  if (portfolio.length === 0 || benchmark.length === 0) return EMPTY_COMPARISON;
+
+  const portfolioStart = portfolio.find((p) => p.value > 0)?.date;
+  if (!portfolioStart) return EMPTY_COMPARISON;
+
+  const baseDate =
+    portfolioStart > benchmark[0].date ? portfolioStart : benchmark[0].date;
+
+  const normalize = (
+    points: { date: string; value: number }[]
+  ): { time: string; value: number }[] => {
+    const fromBase = points.filter((p) => p.date >= baseDate);
+    if (fromBase.length === 0 || fromBase[0].value === 0) return [];
+    const base = fromBase[0].value;
+    return fromBase.map((p) => ({ time: p.date, value: (p.value / base) * 100 }));
+  };
+
+  const portfolioNorm = normalize(portfolio);
+  const benchmarkNorm = normalize(benchmark.map((b) => ({ date: b.date, value: b.close })));
+  if (portfolioNorm.length === 0 || benchmarkNorm.length === 0) return EMPTY_COMPARISON;
+
+  return {
+    portfolio: portfolioNorm,
+    benchmark: benchmarkNorm,
+    baseDate,
+    portfolioReturnPct: (portfolioNorm[portfolioNorm.length - 1].value / 100 - 1) * 100,
+    benchmarkReturnPct: (benchmarkNorm[benchmarkNorm.length - 1].value / 100 - 1) * 100,
+  };
 }
