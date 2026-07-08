@@ -104,9 +104,20 @@ export async function fetchChart(
   };
 }
 
-// Sugerowany symbol Yahoo na podstawie tickera i rynku.
-export function suggestQuoteSymbol(ticker: string, market: string): string {
+// Sugerowany symbol Yahoo na podstawie tickera, rynku i typu instrumentu.
+// INDEX ma inne konwencje niż STOCK/ETF: GPW nadal ".WA" (bez karetki, np.
+// "WIG.WA"), ale USA/OTHER dostają prefiks "^" (np. "^GSPC", "^NDX") —
+// zweryfikowane empirycznie w docs/plans/obsluga-etf-indeksy.md.
+export function suggestQuoteSymbol(
+  ticker: string,
+  market: string,
+  type: string = "STOCK"
+): string {
   const t = ticker.trim().toUpperCase();
+  if (type === "INDEX") {
+    if (market === "GPW") return t.endsWith(".WA") ? t : `${t}.WA`;
+    return t.startsWith("^") ? t : `^${t}`;
+  }
   if (market === "GPW") return t.endsWith(".WA") ? t : `${t}.WA`;
   return t;
 }

@@ -115,6 +115,7 @@ export function computePortfolio(): PortfolioSummary {
   };
 
   for (const company of allCompanies) {
+    if (company.type === "INDEX") continue; // indeks = tylko obserwacja, bez pozycji/P&L
     const txs = (txByCompany.get(company.id) ?? []).slice().sort(sortTx);
     if (txs.length === 0) continue;
 

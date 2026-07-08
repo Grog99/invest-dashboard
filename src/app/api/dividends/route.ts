@@ -25,6 +25,12 @@ export async function POST(req: NextRequest) {
   if (!company) {
     return NextResponse.json({ error: "Nie znaleziono spółki." }, { status: 404 });
   }
+  if (company.type === "INDEX") {
+    return NextResponse.json(
+      { error: "Nie można dodać dywidendy dla indeksu — indeks jest tylko obserwowany." },
+      { status: 400 }
+    );
+  }
 
   try {
     await ensureFxRates(company.currency, date);

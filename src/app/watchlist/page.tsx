@@ -18,6 +18,12 @@ import { WatchlistToggle } from "@/components/WatchlistToggle";
 
 export const dynamic = "force-dynamic";
 
+const TYPE_LABELS: Record<string, string> = {
+  STOCK: "Akcje",
+  ETF: "ETF",
+  INDEX: "Indeks",
+};
+
 export default function WatchlistPage() {
   const watched = db
     .select()
@@ -75,6 +81,7 @@ export default function WatchlistPage() {
                 <Th />
                 <Th>Spółka</Th>
                 <Th>Rynek</Th>
+                <Th>Typ</Th>
                 <Th right>Kurs</Th>
                 <Th right>Dziś</Th>
                 <Th right>Nieprzeczytane newsy</Th>
@@ -107,6 +114,9 @@ export default function WatchlistPage() {
                   </Td>
                   <Td>
                     <Badge>{c.market}</Badge>
+                  </Td>
+                  <Td>
+                    <Badge tone="accent">{TYPE_LABELS[c.type] ?? c.type}</Badge>
                   </Td>
                   <Td right>
                     {q ? (

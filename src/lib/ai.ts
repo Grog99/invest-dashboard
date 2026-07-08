@@ -35,8 +35,13 @@ export function buildCompanyContext(companyId: number): string {
   if (!company) return "";
 
   const parts: string[] = [];
+  const typeLabels: Record<string, string> = {
+    STOCK: "Akcje",
+    ETF: "ETF",
+    INDEX: "Indeks (tylko obserwacja, bez pozycji)",
+  };
   parts.push(
-    `## Spółka\n${company.name} (${company.ticker}), rynek: ${company.market}, waluta: ${company.currency}`
+    `## Spółka\n${company.name} (${company.ticker}), rynek: ${company.market}, waluta: ${company.currency}, typ: ${typeLabels[company.type] ?? company.type}`
   );
 
   const quote = db

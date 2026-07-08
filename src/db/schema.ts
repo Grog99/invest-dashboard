@@ -7,6 +7,10 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+// Typ instrumentu — steruje sugestią symbolu Yahoo i udziałem w silniku portfela.
+export const INSTRUMENT_TYPES = ["STOCK", "ETF", "INDEX"] as const;
+export type InstrumentType = (typeof INSTRUMENT_TYPES)[number];
+
 // Spółki — zarówno posiadane (mają transakcje), jak i obserwowane (watchlist = 1).
 export const companies = sqliteTable("companies", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -18,6 +22,7 @@ export const companies = sqliteTable("companies", {
   watchlist: integer("watchlist").notNull().default(0),
   // Dodatkowe słowa kluczowe (po przecinku) do dopasowywania newsów, np. "Orlen,PKN Orlen"
   aliases: text("aliases"),
+  type: text("type").notNull().default("STOCK"), // STOCK | ETF | INDEX
   createdAt: text("created_at").notNull(),
 });
 

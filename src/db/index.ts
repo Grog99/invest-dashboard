@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS companies (
   quote_symbol TEXT NOT NULL,
   watchlist INTEGER NOT NULL DEFAULT 0,
   aliases TEXT,
+  type TEXT NOT NULL DEFAULT 'STOCK',
   created_at TEXT NOT NULL
 );
 
@@ -223,6 +224,42 @@ function migrateNewsDedup(sqlite: Database.Database): void {
   migrate();
 }
 
+// Tani read-only guard (patrz komentarz przy needsNewsDedupMigration powyżej):
+// samo PRAGMA table_info nie zapisuje nic, więc N równoległych workerów `next
+// build` może je odpytać bez rywalizacji o blokadę zapisu WAL.
+function needsCompanyTypeMigration(sqlite: Database.Database): boolean {
+  const cols = sqlite.prepare(`PRAGMA table_info(companies)`).all() as {
+    name: string;
+  }[];
+  return !cols.some((c) => c.name === "type");
+}
+
+// Jednorazowa (idempotentna) migracja: dokłada kolumnę `type` do istniejących
+// baz (świeże bazy dostają ją już z BOOTSTRAP_SQL). DEFAULT jest stały
+// ('STOCK'), więc ALTER TABLE ... NOT NULL DEFAULT jest dozwolony w SQLite bez
+// backfillu — istniejące wiersze dostają 'STOCK' automatycznie.
+function migrateCompanyType(sqlite: Database.Database): void {
+  if (!needsCompanyTypeMigration(sqlite)) return;
+  const migrate = sqlite.transaction(() => {
+    // Re-sprawdzamy kolumnę WEWNĄTRZ transakcji zapisu: write-transakcje w
+    // SQLite/WAL serializują się między procesami (kolejkują się na
+    // busy_timeout), więc dopiero tu mamy pewność, że inny równoległy worker
+    // `next build` nie dodał już kolumny między naszym read-only guardem
+    // (needsCompanyTypeMigration) a startem tej transakcji — bez tego
+    // powtórnego sprawdzenia dwa workery obie widzą "brak kolumny" i drugi
+    // ALTER TABLE wywala się na "duplicate column name".
+    const cols = sqlite.prepare(`PRAGMA table_info(companies)`).all() as {
+      name: string;
+    }[];
+    if (!cols.some((c) => c.name === "type")) {
+      sqlite.exec(
+        `ALTER TABLE companies ADD COLUMN type TEXT NOT NULL DEFAULT 'STOCK'`
+      );
+    }
+  });
+  migrate();
+}
+
 function createDb(): BetterSQLite3Database<typeof schema> {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const sqlite = new Database(DB_PATH);
@@ -237,6 +274,7 @@ function createDb(): BetterSQLite3Database<typeof schema> {
   sqlite.pragma("busy_timeout = 15000");
   sqlite.exec(BOOTSTRAP_SQL);
   migrateNewsDedup(sqlite);
+  migrateCompanyType(sqlite);
   return drizzle(sqlite, { schema });
 }
 

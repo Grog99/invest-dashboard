@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, companies } from "@/db";
+import { db, companies, INSTRUMENT_TYPES } from "@/db";
 import { suggestQuoteSymbol } from "@/lib/yahoo";
 import { refreshQuotes } from "@/lib/quotes";
 import { nowISO } from "@/lib/format";
@@ -18,9 +18,12 @@ export async function POST(req: NextRequest) {
   const currency =
     String(body.currency ?? "").trim().toUpperCase() ||
     (market === "US" ? "USD" : "PLN");
+  const type = INSTRUMENT_TYPES.includes(body.type)
+    ? (body.type as string)
+    : "STOCK";
   const quoteSymbol =
     String(body.quoteSymbol ?? "").trim().toUpperCase() ||
-    suggestQuoteSymbol(ticker, market);
+    suggestQuoteSymbol(ticker, market, type);
   const aliases = String(body.aliases ?? "").trim() || null;
 
   if (!ticker || !name) {
@@ -40,6 +43,7 @@ export async function POST(req: NextRequest) {
       quoteSymbol,
       watchlist: body.watchlist ? 1 : 0,
       aliases,
+      type,
       createdAt: nowISO(),
     })
     .returning()
