@@ -14,7 +14,7 @@ Uporządkowana lista propozycji rozwoju invest-dashboardu — od drobnych uspraw
 - **Złożoność:** S
 - **Zależności:** brak; migracja = `ALTER TABLE news_items ADD COLUMN dedup_key` + backfill w bootstrapie `src/db/index.ts`.
 
-### 1.2 Paginacja / infinite scroll newsów
+### 1.2 Paginacja / infinite scroll newsów ✅ ZROBIONE
 - **Opis:** Strona `src/app/news/page.tsx` woła `listNews({ limit: 150 })` i ucina resztę. Dodać parametr `offset` (lub cursor po `published_at`) do `listNews()` w `src/lib/news.ts`, endpoint `GET /api/news` (dziś route ma tylko PATCH/DELETE) zwracający kolejną stronę JSON i kliencki komponent doładowujący przy scrollu.
 - **Wartość:** Dostęp do pełnej historii newsów bez czyszczenia bazy; ważne po włączeniu harmonogramu odświeżania (baza szybko urośnie).
 - **Złożoność:** S
@@ -77,7 +77,7 @@ Uporządkowana lista propozycji rozwoju invest-dashboardu — od drobnych uspraw
 - **Złożoność:** M (licząc na gotowym 2.2)
 - **Zależności:** **wymaga 2.2**; dokładność zależy od kompletności historii wpłat.
 
-### 2.4 Benchmark vs WIG / S&P 500
+### 2.4 Benchmark vs WIG / S&P 500 ✅ ZROBIONE
 - **Opis:** Indeksy jako pseudo-spółki (wiersz w `companies` z `market='OTHER'`, `watchlist=1`, np. `quoteSymbol='^GSPC'` dla S&P 500 — działa w Yahoo chart API; symbole indeksów GPW w Yahoo, np. `WIG20.WA`, wymagają weryfikacji w `fetchChart()`) albo osobna tabela `benchmarks`. Na wykresie wartości portfela (dashboard, `AreaChart.tsx`) druga seria: portfel vs benchmark znormalizowany do 100 na początku zakresu.
 - **Wartość:** Natychmiast widać, czy aktywna selekcja spółek bije proste ETF-y.
 - **Złożoność:** M
@@ -99,7 +99,7 @@ Uporządkowana lista propozycji rozwoju invest-dashboardu — od drobnych uspraw
 
 ## 3. Automatyzacja i alerty
 
-### 3.1 Harmonogram odświeżania (node-cron / Task Scheduler)
+### 3.1 Harmonogram odświeżania (node-cron / Task Scheduler) ✅ ZROBIONE
 - **Opis:** Dziś odświeżanie jest wyłącznie ręczne (przyciski w `RefreshButtons.tsx` → `POST /api/quotes/refresh`, `POST /api/news/refresh`). Dwa warianty:
   - **(a) node-cron w procesie Next:** plik `instrumentation.ts` w katalogu głównym (Next wywołuje `register()` przy starcie serwera) + singleton przez `globalThis` (ten sam wzorzec co `__investDb` w `src/db/index.ts`, żeby HMR nie dublował cronów). Harmonogram z tabeli `settings` (np. `cron_quotes='*/15 9-17 * * 1-5'`, `cron_news='*/30 * * * *'`), wywołujący bezpośrednio `refreshQuotes()` / `refreshNews()` z lib.
   - **(b) Windows Task Scheduler:** `schtasks` odpalający `curl -X POST http://localhost:3000/api/quotes/refresh` — zero kodu, ale działa tylko gdy serwer wstał.
@@ -158,7 +158,7 @@ Uporządkowana lista propozycji rozwoju invest-dashboardu — od drobnych uspraw
 
 ## 5. Notatki
 
-### 5.1 Załączniki i obrazy
+### 5.1 Załączniki i obrazy ✅ ZROBIONE
 - **Opis:** Tabela `note_attachments (id, note_id, filename, mime, size, created_at)`, pliki na dysku w `data/attachments/{id}` (obok `data/invest.db` — spójne z lokalnym charakterem aplikacji), endpointy `POST /api/notes/[id]/attachments` (multipart) i `GET /api/attachments/[id]`. Obrazy wstawiane do markdownu jako `![](/api/attachments/123)` — `Markdown.tsx` wyrenderuje je bez zmian.
 - **Wartość:** Zrzuty wykresów, tabele ze sprawozdań i screeny prezentacji w treści researchu.
 - **Złożoność:** M
@@ -217,7 +217,7 @@ Uporządkowana lista propozycji rozwoju invest-dashboardu — od drobnych uspraw
 - **Złożoność:** S
 - **Zależności:** najlepiej z 3.1, ale działa i samodzielnie.
 
-### 6.5 Motyw jasny
+### 6.5 Motyw jasny ✅ ZROBIONE
 - **Opis:** Tokeny kolorów siedzą w `@theme` w `src/app/globals.css` (Tailwind v4) — dodać wariant jasny pod `prefers-color-scheme: light` lub klasę `data-theme` przełączaną w Ustawieniach (klucz w `settings`). Uwaga na komponenty wykresów: `PriceChart`/`AreaChart` (lightweight-charts) i `AllocationDonut` (recharts) mają kolory przekazywane w JS — muszą czytać zmienne CSS lub dostawać motyw propsem.
 - **Wartość:** Komfort przy pracy dziennej; niżej na liście, bo paleta ciemna była walidowana jako podstawowa.
 - **Złożoność:** M (głównie przez wykresy)

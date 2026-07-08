@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local sqlite database + WAL sidecars
 /data/
+
+# parallel Claude Code worktree sessions
+/.claude/worktrees/
