@@ -62,6 +62,21 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // "" czyści wybór ("Brak"); wartość musi być dodatnią liczbą całkowitą,
+  // inaczej ignorujemy (spółka mogła zniknąć — page.tsx i tak weryfikuje id
+  // przy odczycie).
+  if (typeof body.benchmarkCompanyId === "string") {
+    const trimmed = body.benchmarkCompanyId.trim();
+    if (trimmed === "") {
+      setSetting(SETTING_KEYS.dashboardBenchmark, "");
+    } else {
+      const id = Number(trimmed);
+      if (Number.isInteger(id) && id > 0) {
+        setSetting(SETTING_KEYS.dashboardBenchmark, trimmed);
+      }
+    }
+  }
+
   // reloadScheduler() jest kosztowny (przeładowuje harmonogram crona) —
   // wołamy go tylko, gdy w body faktycznie są pola cron, żeby np. samo
   // przełączenie motywu nie przeładowywało harmonogramu.

@@ -1,7 +1,12 @@
 import Link from "next/link";
-import { computePortfolio, portfolioValueHistory } from "@/lib/portfolio";
+import {
+  computePortfolio,
+  portfolioValueHistory,
+  benchmarkCloseHistory,
+  normalizeComparison,
+} from "@/lib/portfolio";
 import { listNews } from "@/lib/news";
-import { fmtMoney, fmtPct, fmtSignedMoney, fmtDateTime } from "@/lib/format";
+import { fmtMoney, fmtNumber, fmtPct, fmtSignedMoney, fmtDateTime } from "@/lib/format";
 import {
   Card,
   StatTile,
@@ -12,13 +17,54 @@ import {
 import { RefreshQuotesButton } from "@/components/RefreshButtons";
 import { AreaChart } from "@/components/charts/AreaChart";
 import { AllocationDonut } from "@/components/charts/AllocationDonut";
+import { BenchmarkChart } from "@/components/charts/BenchmarkChart";
+import { BenchmarkSelect } from "@/components/BenchmarkSelect";
+import { getSetting, SETTING_KEYS } from "@/lib/settings";
+import { db, companies } from "@/db";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
+
+const TYPE_LABELS: Record<string, string> = {
+  STOCK: "Akcje",
+  ETF: "ETF",
+  INDEX: "Indeks",
+};
+
+function returnToneClass(value: number): string {
+  return value > 0.000001 ? "text-pos" : value < -0.000001 ? "text-neg" : "text-ink2";
+}
+
+// Różnica stóp zwrotu w punktach procentowych — jak fmtPct, ale bez "%".
+function fmtPp(value: number): string {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${fmtNumber(value, 1)} pp`;
+}
 
 export default function DashboardPage() {
   const summary = computePortfolio();
   const history = portfolioValueHistory(365);
   const news = listNews({ limit: 8 });
+
+  const benchmarkId = Number(getSetting(SETTING_KEYS.dashboardBenchmark)) || null;
+  const benchmarkCandidates = db
+    .select()
+    .from(companies)
+    .where(and(eq(companies.watchlist, 1), inArray(companies.type, ["INDEX", "ETF"])))
+    .orderBy(asc(companies.ticker))
+    .all();
+  const benchmarkOptions = benchmarkCandidates.map((c) => ({
+    id: c.id,
+    label: `${c.ticker} · ${TYPE_LABELS[c.type] ?? c.type}`,
+  }));
+  // Zapamiętane id może wskazywać spółkę usuniętą lub zmienioną na STOCK —
+  // wtedy defensywnie traktujemy wybór jak "brak".
+  const selectedBenchmark = benchmarkId
+    ? (benchmarkCandidates.find((c) => c.id === benchmarkId) ?? null)
+    : null;
+  const comparison = selectedBenchmark
+    ? normalizeComparison(history, benchmarkCloseHistory(selectedBenchmark.id, 365))
+    : null;
 
   const hasHoldings = summary.holdings.length > 0;
   const dayBase = summary.totalValuePln - summary.totalDayChangePln;
@@ -121,8 +167,66 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-5">
-            <Card title="Wartość portfela (12 mies.)" className="xl:col-span-3">
-              {history.length > 1 ? (
+            <Card
+              title="Wartość portfela (12 mies.)"
+              className="xl:col-span-3"
+              actions={
+                benchmarkOptions.length > 0 ? (
+                  <BenchmarkSelect
+                    options={benchmarkOptions}
+                    selectedId={selectedBenchmark?.id ?? null}
+                  />
+                ) : (
+                  <Link
+                    href="/watchlist"
+                    className="text-[12px] text-accent hover:underline"
+                  >
+                    Dodaj indeks/ETF na Watchliście →
+                  </Link>
+                )
+              }
+            >
+              {selectedBenchmark && comparison && comparison.baseDate !== null ? (
+                <>
+                  <BenchmarkChart
+                    portfolio={comparison.portfolio}
+                    benchmark={comparison.benchmark}
+                    benchmarkLabel={selectedBenchmark.ticker}
+                    height={260}
+                  />
+                  {comparison.portfolioReturnPct !== null &&
+                    comparison.benchmarkReturnPct !== null && (
+                      <p className="mt-2 text-[12px]">
+                        <span className={returnToneClass(comparison.portfolioReturnPct)}>
+                          Portfel {fmtPct(comparison.portfolioReturnPct)}
+                        </span>
+                        <span className="text-muted"> · </span>
+                        <span className={returnToneClass(comparison.benchmarkReturnPct)}>
+                          {selectedBenchmark.ticker} {fmtPct(comparison.benchmarkReturnPct)}
+                        </span>
+                        <span className="text-muted"> · </span>
+                        <span
+                          className={returnToneClass(
+                            comparison.portfolioReturnPct - comparison.benchmarkReturnPct
+                          )}
+                        >
+                          {fmtPp(
+                            comparison.portfolioReturnPct - comparison.benchmarkReturnPct
+                          )}
+                        </span>
+                      </p>
+                    )}
+                  <p className="mt-1 text-[11px] text-muted">
+                    Porównanie krzywej wartości, nie uwzględnia wpłat/wypłat w
+                    trakcie okresu (pełna stopa zwrotu TWR/XIRR — poza zakresem).
+                  </p>
+                </>
+              ) : selectedBenchmark ? (
+                <EmptyState
+                  title="Za mało wspólnych danych do porównania"
+                  hint="Portfel i benchmark nie mają nakładającego się okresu w ciągu ostatnich 12 miesięcy — odśwież notowania."
+                />
+              ) : history.length > 1 ? (
                 <AreaChart
                   data={history.map((h) => ({ time: h.date, value: h.value }))}
                   height={260}
