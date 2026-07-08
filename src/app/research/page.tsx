@@ -29,7 +29,7 @@ export default function ResearchPage() {
         actions={
           <Link
             href="/research/new"
-            className="rounded-lg bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-accent-deep"
+            className="rounded-lg bg-accent px-3.5 py-1.5 text-[13px] font-medium text-accent-ink hover:bg-accent-deep"
           >
             + Nowa notatka
           </Link>
@@ -44,7 +44,7 @@ export default function ResearchPage() {
             action={
               <Link
                 href="/research/new"
-                className="rounded-lg bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-accent-deep"
+                className="rounded-lg bg-accent px-3.5 py-1.5 text-[13px] font-medium text-accent-ink hover:bg-accent-deep"
               >
                 + Nowa notatka
               </Link>

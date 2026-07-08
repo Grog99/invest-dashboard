@@ -12,11 +12,11 @@ export function Sidebar() {
     <aside className="sticky top-0 hidden h-screen w-52 shrink-0 flex-col border-r border-border bg-surface md:flex">
       <div className="px-5 pb-4 pt-6">
         <Link href="/" className="block">
-          <div className="text-[15px] font-semibold tracking-tight">
-            Invest<span className="text-accent"> Dashboard</span>
+          <div className="font-serif text-[17px] font-bold tracking-tight text-ink">
+            Invest<span className="text-accent"> Rocznik</span>
           </div>
-          <div className="mt-0.5 text-[11px] text-muted">
-            prywatny monitor inwestycji
+          <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted">
+            prywatny monitor · od 2026
           </div>
         </Link>
       </div>

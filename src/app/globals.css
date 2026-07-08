@@ -9,61 +9,70 @@
    @theme niżej tylko je aliasuje (referencją `var()`, nie literałem) pod
    nazwy, których Tailwind używa do generowania klas utility (`bg-bg` itd.). */
 :root {
-  --color-bg: #0d0d0d; /* płaszczyzna strony */
-  --color-surface: #1a1a19; /* karty / powierzchnia wykresów */
-  --color-surface2: #232321; /* hover, inputy */
-  --color-border: #2c2c2a; /* hairline */
-  --color-border2: #383835; /* mocniejsza krawędź / oś */
-  --color-ink: #ffffff;
-  --color-ink2: #c3c2b7;
-  --color-muted: #898781;
-  --color-accent: #3987e5; /* slot 1 (blue, dark) */
-  --color-accent-deep: #1c5cab;
-  --color-pos: #0ca30c; /* delta dodatnia (dark) */
-  --color-neg: #e66767; /* delta ujemna (red, dark) */
-  --color-warn: #fab219;
+  /* „Rocznik" — Wieczór (ciepły atrament); to baza CSS bez atrybutu motywu. */
+  --color-bg: #191410; /* płaszczyzna strony */
+  --color-surface: #211b14; /* karty / powierzchnia wykresów */
+  --color-surface2: #2a2219; /* hover, inputy */
+  --color-border: #3a3020; /* hairline */
+  --color-border2: #4a3e28; /* mocniejsza krawędź / oś */
+  --color-ink: #eee4d0;
+  --color-ink2: #ac9e86;
+  --color-muted: #93876e;
+  --color-accent: #c9a24a; /* akcent — sepia/złoto (Wieczór) */
+  --color-accent-deep: #d9b45e;
+  /* Tekst na tle --color-accent (przyciski primary) — osobny token, bo
+     akcent Wieczoru jest jasnym złotem: biały tekst miałby zbyt słaby
+     kontrast (~2.4:1). Ciemny atrament daje ~6.9:1. */
+  --color-accent-ink: #241e15;
+  --color-pos: #78b085; /* delta dodatnia */
+  --color-neg: #d67b6a; /* delta ujemna */
+  --color-warn: #cba64e;
 
   /* Paleta kategoryczna (donut alokacji) — czytana tylko z JS
      (getComputedStyle), nigdy jako klasa utility Tailwinda, więc nie musi
-     (i nie powinna) iść przez @theme. */
-  --color-cat-1: #3987e5;
-  --color-cat-2: #199e70;
-  --color-cat-3: #c98500;
-  --color-cat-4: #008300;
-  --color-cat-5: #9085e9;
-  --color-cat-6: #e66767;
-  --color-cat-7: #d55181;
-  --color-cat-8: #d95926;
-  --color-cat-other: #898781;
+     (i nie powinna) iść przez @theme. Osobna warstwa od kolorów nastroju
+     powyżej — dobrana pod rozróżnialność serii, nie pod „ciepłotę" UI. */
+  --color-cat-1: #46b3ac;
+  --color-cat-2: #e0a93a;
+  --color-cat-3: #e0714e;
+  --color-cat-4: #7c9ad0;
+  --color-cat-5: #b673a6;
+  --color-cat-6: #a6b45a;
+  --color-cat-7: #8fa6b4;
+  --color-cat-8: #c08a64;
+  --color-cat-other: #b6a88c;
 }
 
-/* Motyw jasny — nadpisanie tych samych zmiennych pod bardziej szczegółowym
-   selektorem (specyficzność atrybutu > gołego :root), zaakceptowany punkt
-   startowy (bez formalnego przejścia WCAG przed mergem). */
+/* Motyw jasny („Rocznik" — Dzień, ciepły papier) — nadpisanie tych samych
+   zmiennych pod bardziej szczegółowym selektorem (specyficzność atrybutu >
+   gołego :root). */
 :root[data-theme="light"] {
-  --color-bg: #ffffff;
-  --color-surface: #f7f7f5;
-  --color-surface2: #ececea;
-  --color-border: #e2e2df;
-  --color-border2: #cfcfca;
-  --color-ink: #1a1a19;
-  --color-ink2: #3f3f3a;
-  --color-muted: #6b6a64;
-  --color-accent: #1c5cab; /* ciemniejszy niebieski dla kontrastu na bieli */
-  --color-accent-deep: #14468a;
-  --color-pos: #0a7a0a;
-  --color-neg: #cc4444;
-  --color-warn: #b26b00;
+  --color-bg: #f4ecdd;
+  --color-surface: #fbf5e9;
+  --color-surface2: #ece1cc;
+  --color-border: #d8c9ac;
+  --color-border2: #c9b48f;
+  --color-ink: #241e15;
+  --color-ink2: #5e5343;
+  --color-muted: #6e6252;
+  --color-accent: #6e4a26; /* akcent — sepia (Dzień) */
+  --color-accent-deep: #543619;
+  /* Akcent Dnia jest ciemną sepią — jasny (prawie biały) tekst ma dobry
+     kontrast (~7.9:1), symetryczny odpowiednik --color-accent-ink z bazy. */
+  --color-accent-ink: #fbf5e9;
+  --color-pos: #2c5a38;
+  --color-neg: #9c3b2c;
+  --color-warn: #9c6717;
 
-  --color-cat-1: #1c5cab;
-  --color-cat-2: #147a56;
-  --color-cat-3: #a06800;
-  --color-cat-4: #006600;
-  --color-cat-5: #6a5fd1;
-  --color-cat-6: #cc4444;
-  --color-cat-7: #b03a67;
-  --color-cat-8: #b0451c;
-  --color-cat-other: #6b6a64;
+  --color-cat-1: #1f6e6a;
+  --color-cat-2: #c08a1e;
+  --color-cat-3: #b14a2e;
+  --color-cat-4: #3e5b8c;
+  --color-cat-5: #7a3f6b;
+  --color-cat-6: #6e7a33;
+  --color-cat-7: #566b7a;
+  --color-cat-8: #8a5a3c;
+  --color-cat-other: #9b8e76;
 }
 
 /* Aliasy dla generatora utility Tailwinda — `inline`, żeby emitować
@@ -80,6 +89,7 @@
   --color-muted: var(--color-muted);
   --color-accent: var(--color-accent);
   --color-accent-deep: var(--color-accent-deep);
+  --color-accent-ink: var(--color-accent-ink);
   --color-pos: var(--color-pos);
   --color-neg: var(--color-neg);
   --color-warn: var(--color-warn);
@@ -87,6 +97,8 @@
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI",
     sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino,
+    "Book Antiqua", Georgia, serif;
 }
 
 /* Płynne przejście kolorów przy przełączeniu motywu (nie skokowa zmiana). */

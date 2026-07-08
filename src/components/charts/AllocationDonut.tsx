@@ -82,6 +82,7 @@ export function AllocationDonut({ data }: { data: AllocationSlice[] }) {
               outerRadius={90}
               startAngle={90}
               endAngle={-270}
+              paddingAngle={slices.length > 1 ? 2 : 0}
               stroke={STROKE_COLOR}
               strokeWidth={2}
               isAnimationActive={false}

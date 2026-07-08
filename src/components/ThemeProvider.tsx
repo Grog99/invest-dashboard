@@ -72,29 +72,32 @@ export function useTheme(): ThemeContextValue {
 // Domyślne (dark) wartości tokenów — fallback, gdy hook jest wywołany podczas
 // SSR (brak `document`); recharts i lightweight-charts i tak renderują
 // realnie dopiero po stronie klienta.
+// Wartości „Wieczór" (Rocznik) — muszą odpowiadać bazowemu :root w
+// globals.css, żeby fallback (SSR/pre-hydration) nie odjeżdżał od realnych
+// tokenów CSS.
 const FALLBACK_COLORS = {
-  bg: "#0d0d0d",
-  surface: "#1a1a19",
-  surface2: "#232321",
-  border: "#2c2c2a",
-  border2: "#383835",
-  ink: "#ffffff",
-  ink2: "#c3c2b7",
-  muted: "#898781",
-  accent: "#3987e5",
-  accentDeep: "#1c5cab",
-  pos: "#0ca30c",
-  neg: "#e66767",
-  warn: "#fab219",
-  cat1: "#3987e5",
-  cat2: "#199e70",
-  cat3: "#c98500",
-  cat4: "#008300",
-  cat5: "#9085e9",
-  cat6: "#e66767",
-  cat7: "#d55181",
-  cat8: "#d95926",
-  catOther: "#898781",
+  bg: "#191410",
+  surface: "#211b14",
+  surface2: "#2a2219",
+  border: "#3a3020",
+  border2: "#4a3e28",
+  ink: "#eee4d0",
+  ink2: "#ac9e86",
+  muted: "#93876e",
+  accent: "#c9a24a",
+  accentDeep: "#d9b45e",
+  pos: "#78b085",
+  neg: "#d67b6a",
+  warn: "#cba64e",
+  cat1: "#46b3ac",
+  cat2: "#e0a93a",
+  cat3: "#e0714e",
+  cat4: "#7c9ad0",
+  cat5: "#b673a6",
+  cat6: "#a6b45a",
+  cat7: "#8fa6b4",
+  cat8: "#c08a64",
+  catOther: "#b6a88c",
 } as const;
 
 export type ThemeColors = { [K in keyof typeof FALLBACK_COLORS]: string };

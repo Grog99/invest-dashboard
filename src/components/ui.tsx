@@ -15,11 +15,13 @@ export function Card({
 }) {
   return (
     <section
-      className={`rounded-xl border border-border bg-surface ${className}`}
+      className={`rounded-2xl border border-border bg-surface ${className}`}
     >
       {(title || actions) && (
         <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <h2 className="text-[13px] font-semibold text-ink">{title}</h2>
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink2">
+            {title}
+          </h2>
           {actions && <div className="flex items-center gap-2">{actions}</div>}
         </header>
       )}
@@ -42,11 +44,13 @@ export function StatTile({
   const toneClass =
     tone === "pos" ? "text-pos" : tone === "neg" ? "text-neg" : "text-ink";
   return (
-    <div className="rounded-xl border border-border bg-surface px-4 py-3.5">
+    <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
       <div className="text-[11px] font-medium uppercase tracking-wide text-muted">
         {label}
       </div>
-      <div className={`mt-1 text-xl font-semibold tracking-tight ${toneClass}`}>
+      <div
+        className={`mt-1 text-xl font-semibold tracking-tight tabular-nums ${toneClass}`}
+      >
         {value}
       </div>
       {sub && <div className="mt-0.5 text-[12px] text-ink2">{sub}</div>}
@@ -127,7 +131,7 @@ export function Button({
 }: ButtonProps) {
   const variants: Record<string, string> = {
     primary:
-      "bg-accent text-white hover:bg-accent-deep border border-transparent",
+      "bg-accent text-accent-ink hover:bg-accent-deep border border-transparent",
     secondary:
       "bg-surface2 text-ink border border-border2 hover:border-muted",
     ghost: "bg-transparent text-ink2 border border-transparent hover:bg-surface2",

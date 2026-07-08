@@ -11,8 +11,11 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Prywatny dashboard inwestycyjny",
     start_url: "/",
     display: "standalone",
-    background_color: "#0d0d0d",
-    theme_color: "#0d0d0d",
+    // Dopasowane do domyślnego motywu „Dzień" (Rocznik, --color-bg jasny).
+    // Ekran powitalny PWA nie zna wyboru motywu użytkownika (statyczny
+    // manifest), więc idzie za DEFAULT_THEME z lib/settings.ts.
+    background_color: "#f4ecdd",
+    theme_color: "#f4ecdd",
     lang: "pl",
     dir: "ltr",
     icons: [
