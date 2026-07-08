@@ -329,6 +329,7 @@ export function listNews(opts: {
   companyId?: number;
   limit?: number;
   unreadOnly?: boolean;
+  onlyMyCompanies?: boolean;
   cursor?: NewsCursor;
 }): NewsListItem[] {
   const limit = opts.limit ?? 50;
@@ -340,6 +341,15 @@ export function listNews(opts: {
     ? sql`(coalesce(${newsItems.publishedAt}, ''), ${newsItems.id}) < (${opts.cursor.publishedAt ?? ""}, ${opts.cursor.id})`
     : undefined;
   const orderByExpr = sql`coalesce(${newsItems.publishedAt}, '') DESC, ${newsItems.id} DESC`;
+
+  // „Tylko moje spółki" == news ma co najmniej jeden wpis w news_company
+  // (buildMatchers() buduje matchery wyłącznie ze spółek użytkownika, więc
+  // każdy wpis news_company wskazuje jedną z nich). EXISTS zamiast innerJoin
+  // — join zdublowałby newsy dopasowane do wielu spółek i rozjechał limit/
+  // kursor keyset (patrz Ryzyka w planie).
+  const hasMatchCondition = opts.onlyMyCompanies
+    ? sql`exists (select 1 from ${newsCompany} where ${newsCompany.newsId} = ${newsItems.id})`
+    : undefined;
 
   let baseIds: number[];
   if (opts.companyId) {
@@ -365,6 +375,7 @@ export function listNews(opts: {
       .where(
         and(
           opts.unreadOnly ? eq(newsItems.read, 0) : undefined,
+          hasMatchCondition,
           cursorCondition
         )
       )
