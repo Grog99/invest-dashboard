@@ -154,6 +154,21 @@ export const settings = sqliteTable("settings", {
   value: text("value").notNull(),
 });
 
+// Załączniki (obrazy) notatek — plik na dysku w data/attachments/{id}
+// (src/lib/attachments.ts). noteId NOT NULL + CASCADE: załącznik nie
+// istnieje bez notatki (w przeciwieństwie do notes.companyId, które jest
+// nullable — notatka przeżywa usunięcie spółki).
+export const noteAttachments = sqliteTable("note_attachments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  noteId: integer("note_id")
+    .notNull()
+    .references(() => notes.id, { onDelete: "cascade" }),
+  filename: text("filename").notNull(),
+  mime: text("mime").notNull(),
+  size: integer("size").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
 export type Company = typeof companies.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
 export type Dividend = typeof dividends.$inferSelect;
@@ -162,3 +177,4 @@ export type QuoteDaily = typeof quotesDaily.$inferSelect;
 export type NewsSource = typeof newsSources.$inferSelect;
 export type NewsItem = typeof newsItems.$inferSelect;
 export type Note = typeof notes.$inferSelect;
+export type NoteAttachment = typeof noteAttachments.$inferSelect;
