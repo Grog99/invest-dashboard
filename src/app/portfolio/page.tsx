@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db, companies, transactions } from "@/db";
 import { asc, desc } from "drizzle-orm";
 import { computePortfolio, computeYearlyTax } from "@/lib/portfolio";
+import { computeCfdPositions, type CfdPnlSource } from "@/lib/cfd";
 import { fmtMoney, fmtNumber, fmtQty, fmtDate } from "@/lib/format";
 import {
   Card,
@@ -18,16 +19,24 @@ import { RefreshQuotesButton } from "@/components/RefreshButtons";
 import { CompanyModalButton } from "@/components/CompanyForm";
 import { TransactionModalButton } from "@/components/TransactionForm";
 import { DividendModalButton } from "@/components/DividendForm";
+import { CfdModalButton } from "@/components/CfdForm";
 import { DeleteButton } from "@/components/DeleteButton";
 import { TransactionEditButton } from "@/components/TransactionEditButton";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { getLogoFlags } from "@/lib/logos";
+
+function CfdSourceBadge({ source }: { source: CfdPnlSource }) {
+  if (source === "XTB") return <Badge tone="accent">wg XTB</Badge>;
+  if (source === "YAHOO") return <Badge tone="neutral">szacunek Yahoo</Badge>;
+  return <Badge tone="warn">brak ceny</Badge>;
+}
 
 export const dynamic = "force-dynamic";
 
 export default function PortfolioPage() {
   const summary = computePortfolio();
   const yearly = computeYearlyTax(summary);
+  const cfd = computeCfdPositions();
   const allCompanies = db
     .select()
     .from(companies)
@@ -67,6 +76,7 @@ export default function PortfolioPage() {
                 />
               </>
             )}
+            <CfdModalButton label="+ CFD" variant="secondary" size="sm" />
           </>
         }
       />
@@ -207,6 +217,146 @@ export default function PortfolioPage() {
                 </div>
               ))}
             </div>
+          </>
+        )}
+      </Card>
+
+      <Card title="Pozycje CFD" className="mb-4">
+        {cfd.positions.length === 0 ? (
+          <EmptyState
+            title="Brak pozycji CFD"
+            hint="Dodaj pozycję przez „+ CFD” — domyślnie WIG20, wartość punktu 20 zł/pkt."
+          />
+        ) : (
+          <>
+            <div className="hidden md:block">
+              <Table
+                head={
+                  <>
+                    <Th>Pozycja</Th>
+                    <Th right>Wolumen</Th>
+                    <Th right>Cena otwarcia</Th>
+                    <Th right>Kurs bieżący</Th>
+                    <Th right>Wart. punktu</Th>
+                    <Th right>Ekspozycja</Th>
+                    <Th right>Wynik P&L</Th>
+                    <Th />
+                  </>
+                }
+              >
+                {cfd.positions.map((p) => (
+                  <tr key={p.position.id} className="hover:bg-surface2/40">
+                    <Td>
+                      <span className="inline-flex items-center gap-2">
+                        <Badge tone={p.position.direction === "LONG" ? "pos" : "neg"}>
+                          {p.position.direction}
+                        </Badge>
+                        <span>
+                          <span className="font-medium text-ink">{p.position.name}</span>
+                          <span className="ml-2 hidden text-[12px] text-muted lg:inline">
+                            {p.position.quoteSymbol}
+                          </span>
+                        </span>
+                      </span>
+                    </Td>
+                    <Td right>{fmtQty(p.position.volume)}</Td>
+                    <Td right>{fmtNumber(p.position.openPrice)}</Td>
+                    <Td right>
+                      {p.effectivePrice !== null ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          {fmtNumber(p.effectivePrice)}
+                          <CfdSourceBadge source={p.pnlSource} />
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-muted">—</span>
+                          <CfdSourceBadge source={p.pnlSource} />
+                        </span>
+                      )}
+                    </Td>
+                    <Td right>
+                      {fmtNumber(p.position.pointValue)}{" "}
+                      <span className="text-muted">PLN/pkt</span>
+                    </Td>
+                    <Td right>
+                      {p.exposure !== null ? fmtMoney(p.exposure) : "—"}
+                    </Td>
+                    <Td right>
+                      <Delta value={p.pnl} />
+                    </Td>
+                    <Td right>
+                      <span className="inline-flex items-center gap-1">
+                        <CfdModalButton position={p.position} iconOnly />
+                        <DeleteButton
+                          url={`/api/cfd/${p.position.id}`}
+                          confirmText={`Usunąć pozycję CFD „${p.position.name}"?`}
+                          label="Usuń"
+                          iconOnly
+                        />
+                      </span>
+                    </Td>
+                  </tr>
+                ))}
+              </Table>
+            </div>
+            <div className="space-y-2 md:hidden">
+              {cfd.positions.map((p) => (
+                <div
+                  key={p.position.id}
+                  className="rounded-lg border border-border bg-surface p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <Badge tone={p.position.direction === "LONG" ? "pos" : "neg"}>
+                        {p.position.direction}
+                      </Badge>
+                      <div className="min-w-0">
+                        <div className="font-medium text-ink">{p.position.name}</div>
+                        <div className="truncate text-[12px] text-muted">
+                          {p.position.quoteSymbol}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-[11px] text-muted">Wynik P&L</div>
+                      <Delta value={p.pnl} />
+                    </div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    <Field label="Wolumen">{fmtQty(p.position.volume)}</Field>
+                    <Field label="Cena otwarcia">{fmtNumber(p.position.openPrice)}</Field>
+                    <Field label="Kurs bieżący">
+                      {p.effectivePrice !== null ? fmtNumber(p.effectivePrice) : "—"}
+                    </Field>
+                    <Field label="Źródło">
+                      <CfdSourceBadge source={p.pnlSource} />
+                    </Field>
+                    <Field label="Wart. punktu">
+                      {fmtNumber(p.position.pointValue)} PLN/pkt
+                    </Field>
+                    <Field label="Ekspozycja">
+                      {p.exposure !== null ? fmtMoney(p.exposure) : "—"}
+                    </Field>
+                  </div>
+                  <div className="mt-2 flex justify-end gap-1">
+                    <CfdModalButton position={p.position} iconOnly />
+                    <DeleteButton
+                      url={`/api/cfd/${p.position.id}`}
+                      confirmText={`Usunąć pozycję CFD „${p.position.name}"?`}
+                      label="Usuń"
+                      iconOnly
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-muted">
+              Ekspozycja (wartość nominalna, z dźwignią) jest informacyjna —{" "}
+              <strong>nie</strong> wchodzi do wartości portfela. Do majątku dolicza
+              się tylko wynik P&L (mark-to-market). Szacunek Yahoo liczy się z
+              indeksu kasowego WIG20, a XTB wycenia CFD z kontraktu futures FW20 —
+              różnica to baza/rolowanie; skoryguj „wg XTB”, jeśli chcesz dokładny wynik.
+            </p>
           </>
         )}
       </Card>
