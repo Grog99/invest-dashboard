@@ -6,33 +6,18 @@
 // awatar, gdy plik zniknął z cache'u/serwer zwrócił 404 (kalka podejścia
 // znanego z innych "use client" komponentów w projekcie).
 //
-// Kolor awatara: deterministyczny hash tickera → paleta kategoryczna
-// `--color-cat-*` z globals.css (te same tokeny co AllocationDonut, jedno
-// źródło prawdy, czytelne w light/dark). Tekst na tle: nowy token
-// `--color-cat-ink` (dodany do globals.css razem z tym komponentem) —
-// odwrotny w Dniu/Wieczorze, bo paleta kategoryczna ma odwróconą jasność
-// między motywami (patrz komentarze przy `--color-cat-ink` w globals.css).
+// Kolor awatara: własny kolor spółki (color), gdy ustawiony, inaczej
+// deterministyczny hash tickera → paleta kategoryczna `--color-cat-*` z
+// globals.css (te same tokeny co AllocationDonut). Rezolucja tła/tekstu —
+// jedno źródło prawdy w src/lib/companyColor.ts (avatarBackground/avatarInk),
+// żeby CompanyLogo, badge newsów i AllocationDonut się nie rozjechały.
+// Tekst na tle: token `--color-cat-ink` — odwrotny w Dniu/Wieczorze, bo
+// paleta kategoryczna ma odwróconą jasność między motywami (patrz komentarze
+// przy `--color-cat-ink` w globals.css); dla własnego hexa liczony z
+// luminancji (patrz resolveColorInk w companyColor.ts).
 
 import { useState } from "react";
-
-const AVATAR_PALETTE = [
-  "var(--color-cat-1)",
-  "var(--color-cat-2)",
-  "var(--color-cat-3)",
-  "var(--color-cat-4)",
-  "var(--color-cat-5)",
-  "var(--color-cat-6)",
-  "var(--color-cat-7)",
-  "var(--color-cat-8)",
-];
-
-function hashString(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (h * 31 + s.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
-}
+import { avatarBackground, avatarInk } from "@/lib/companyColor";
 
 function initialsFor(ticker: string): string {
   const t = ticker.trim().toUpperCase();
@@ -49,12 +34,14 @@ export function CompanyLogo({
   name,
   companyId,
   hasLogo,
+  color,
   size = "sm",
 }: {
   ticker: string;
   name: string;
   companyId: number;
   hasLogo: boolean;
+  color?: string | null;
   size?: "sm" | "md";
 }) {
   const [failed, setFailed] = useState(false);
@@ -82,11 +69,13 @@ export function CompanyLogo({
     );
   }
 
-  const color = AVATAR_PALETTE[hashString(ticker.toUpperCase()) % AVATAR_PALETTE.length];
   return (
     <span
       className={`inline-flex shrink-0 items-center justify-center rounded-md font-semibold uppercase tracking-tight ${dims.box} ${dims.text}`}
-      style={{ background: color, color: "var(--color-cat-ink)" }}
+      style={{
+        background: avatarBackground(color, ticker),
+        color: avatarInk(color),
+      }}
       title={name}
     >
       {initialsFor(ticker)}

@@ -6,6 +6,7 @@ import { Modal } from "./Modal";
 import { Button, Input, Label, Select } from "./ui";
 import type { Company } from "@/db/schema";
 import { suggestQuoteSymbol } from "@/lib/yahoo";
+import { CAT_TOKENS, normalizeColor } from "@/lib/companyColor";
 
 export function CompanyModalButton({
   company,
@@ -36,6 +37,15 @@ export function CompanyModalButton({
   const [watchlist, setWatchlist] = useState(
     company ? company.watchlist === 1 : defaultWatchlist
   );
+  // Kolor: token presetu ("cat-1".."cat-8","cat-other"), własny "#rrggbb" albo
+  // null (brak — fallback na hash tickera jak dziś). `hexDraft` to osobny stan
+  // dla pola tekstowego/native <input type="color">, żeby dało się wpisywać
+  // hex znak po znaku bez natychmiastowego odrzucania niepełnego wpisu — do
+  // `color` trafia dopiero zwalidowany wynik. Patrz docs/plans/kolor-spolki.md.
+  const [color, setColor] = useState<string | null>(company?.color ?? null);
+  const [hexDraft, setHexDraft] = useState(
+    company?.color && company.color.startsWith("#") ? company.color : ""
+  );
 
   const onMarketChange = (m: string) => {
     setMarket(m);
@@ -52,6 +62,37 @@ export function CompanyModalButton({
   const suggestedSymbol =
     ticker.trim() !== "" ? suggestQuoteSymbol(ticker, market, type) : "";
 
+  const selectToken = (token: string) => {
+    setColor(token);
+    setHexDraft("");
+  };
+
+  const clearColor = () => {
+    setColor(null);
+    setHexDraft("");
+  };
+
+  // Native <input type="color"> zawsze zwraca poprawny "#rrggbb" — nie trzeba
+  // walidować, tylko zsynchronizować oba stany.
+  const onNativeColorChange = (raw: string) => {
+    setHexDraft(raw);
+    setColor(raw);
+  };
+
+  // Pole tekstowe: wyczyszczenie do pustego = wyczyszczenie koloru (color→null,
+  // spójne z przyciskiem „Brak” i podświetleniem stanu). Poprawny hex ustawia
+  // color. Niepełny/niepoprawny wpis (np. "#12") NIE psuje ostatniej poprawnej
+  // wartości — zostaje do domknięcia lub wyczyszczenia.
+  const onHexDraftChange = (raw: string) => {
+    setHexDraft(raw);
+    if (raw.trim() === "") {
+      setColor(null);
+      return;
+    }
+    const result = normalizeColor(raw);
+    if (result.ok && result.value?.startsWith("#")) setColor(result.value);
+  };
+
   const save = async () => {
     setBusy(true);
     setError(null);
@@ -64,6 +105,7 @@ export function CompanyModalButton({
         quoteSymbol: quoteSymbol || suggestedSymbol,
         aliases,
         domain,
+        color,
         type,
         watchlist,
       };
@@ -195,6 +237,56 @@ export function CompanyModalButton({
             <p className="mt-1 text-[11px] leading-relaxed text-muted">
               Opcjonalna — jeśli pusta, logo próbujemy dobrać automatycznie po
               tickerze/nazwie.
+            </p>
+          </div>
+          <div>
+            <Label>Kolor spółki</Label>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {CAT_TOKENS.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => selectToken(t)}
+                  title={t}
+                  aria-label={`Kolor ${t}`}
+                  aria-pressed={color === t}
+                  className={`h-6 w-6 shrink-0 cursor-pointer rounded-full border-2 ${
+                    color === t ? "border-ink" : "border-transparent"
+                  }`}
+                  style={{ background: `var(--color-${t})` }}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={clearColor}
+                aria-pressed={color === null}
+                className={`cursor-pointer rounded-lg border px-2 py-1 text-[11px] font-medium ${
+                  color === null
+                    ? "border-ink text-ink"
+                    : "border-border2 text-muted hover:text-ink2"
+                }`}
+              >
+                Brak
+              </button>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="color"
+                aria-label="Własny kolor"
+                value={hexDraft || "#8a5a3c"}
+                onChange={(e) => onNativeColorChange(e.target.value)}
+                className="h-8 w-10 shrink-0 cursor-pointer rounded border border-border2 bg-transparent p-0"
+              />
+              <Input
+                value={hexDraft}
+                onChange={(e) => onHexDraftChange(e.target.value)}
+                placeholder="#rrggbb"
+                className="flex-1"
+              />
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted">
+              Preset (theme-aware) albo własny hex (stały w obu motywach).
+              „Brak” = domyślny kolor z hasha tickera, jak dziś.
             </p>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink2">

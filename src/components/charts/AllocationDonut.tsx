@@ -24,6 +24,7 @@
 
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { fmtMoney } from "@/lib/format";
+import { resolveColorBackground } from "@/lib/companyColor";
 
 const PALETTE = [
   "var(--color-cat-1)",
@@ -42,6 +43,9 @@ const MAX_SLICES = 7;
 export interface AllocationSlice {
   name: string;
   value: number; // PLN
+  // Własny kolor spółki (token presetu albo hex) — nadpisuje slot z PALETTE
+  // gdy ustawiony, patrz colorFor(). "Inne" nigdy nie ma koloru (zawsze szare).
+  color?: string | null;
 }
 
 function foldSlices(data: AllocationSlice[]): AllocationSlice[] {
@@ -66,8 +70,12 @@ export function AllocationDonut({ data }: { data: AllocationSlice[] }) {
     );
   }
 
-  const colorFor = (name: string, i: number) =>
-    name === "Inne" ? OTHER_COLOR : PALETTE[i % PALETTE.length];
+  // Kolor spółki nadpisuje slot palety tylko gdy ustawiony i prawidłowy;
+  // "Inne" (bez color) zawsze zostaje szare, niezależnie od slotu i.
+  const colorFor = (s: AllocationSlice, i: number) =>
+    s.name === "Inne"
+      ? OTHER_COLOR
+      : (resolveColorBackground(s.color) ?? PALETTE[i % PALETTE.length]);
 
   return (
     <div className="flex flex-wrap items-center gap-5">
@@ -88,7 +96,7 @@ export function AllocationDonut({ data }: { data: AllocationSlice[] }) {
               isAnimationActive={false}
             >
               {slices.map((s, i) => (
-                <Cell key={s.name} fill={colorFor(s.name, i)} />
+                <Cell key={s.name} fill={colorFor(s, i)} />
               ))}
             </Pie>
             <Tooltip
@@ -118,7 +126,7 @@ export function AllocationDonut({ data }: { data: AllocationSlice[] }) {
             <span className="flex items-center gap-2 text-ink2">
               <span
                 className="inline-block h-2.5 w-2.5 rounded-sm"
-                style={{ background: colorFor(s.name, i) }}
+                style={{ background: colorFor(s, i) }}
                 aria-hidden
               />
               {s.name}

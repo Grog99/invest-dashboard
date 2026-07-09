@@ -3,6 +3,7 @@ import { db, companies, quotesDaily, quotesLatest, INSTRUMENT_TYPES } from "@/db
 import { eq } from "drizzle-orm";
 import { refreshQuotes } from "@/lib/quotes";
 import { refreshLogos } from "@/lib/logos";
+import { normalizeColor } from "@/lib/companyColor";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -47,6 +48,19 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
   if (body.domain !== undefined) {
     updates.domain = String(body.domain ?? "").trim().toLowerCase() || null;
+  }
+  // undefined = nie podano (nie ruszamy); null/"" = wyczyszczenie koloru
+  // (poprawna wartość); cokolwiek nieprawidłowego → 400 (parytet z resztą
+  // walidacji PATCH, patrz docs/plans/kolor-spolki.md, sekcja "Decyzje").
+  if (body.color !== undefined) {
+    const colorResult = normalizeColor(body.color);
+    if (!colorResult.ok) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy kolor spółki." },
+        { status: 400 }
+      );
+    }
+    updates.color = colorResult.value;
   }
 
   if (Object.keys(updates).length === 0) {

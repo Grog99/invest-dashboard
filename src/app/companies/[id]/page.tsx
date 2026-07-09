@@ -133,6 +133,7 @@ export default async function CompanyPage({
             name={company.name}
             companyId={company.id}
             hasLogo={hasLogo}
+            color={company.color}
             size="md"
           />
         }
