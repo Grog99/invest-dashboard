@@ -4,6 +4,7 @@ import { suggestQuoteSymbol } from "@/lib/yahoo";
 import { refreshQuotes } from "@/lib/quotes";
 import { refreshLogos } from "@/lib/logos";
 import { nowISO } from "@/lib/format";
+import { normalizeColor } from "@/lib/companyColor";
 
 export async function GET() {
   return NextResponse.json({ companies: db.select().from(companies).all() });
@@ -35,6 +36,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Surowa walidacja: nieprawidłowy kolor → 400, bez cichego zapisu null
+  // (parytet z walidacją reszty pól POST, patrz docs/plans/kolor-spolki.md,
+  // sekcja "Decyzje"). null/"" to poprawna wartość (brak koloru).
+  const colorResult = normalizeColor(body.color);
+  if (!colorResult.ok) {
+    return NextResponse.json(
+      { error: "Nieprawidłowy kolor spółki." },
+      { status: 400 }
+    );
+  }
+
   const created = db
     .insert(companies)
     .values({
@@ -47,6 +59,7 @@ export async function POST(req: NextRequest) {
       aliases,
       type,
       domain,
+      color: colorResult.value,
       createdAt: nowISO(),
     })
     .returning()

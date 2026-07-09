@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge } from "./ui";
 import { fmtDateTime } from "@/lib/format";
+import { avatarBackground, avatarInk } from "@/lib/companyColor";
 import type { NewsListItem } from "@/lib/news";
 
 export function NewsInfiniteList({
@@ -143,7 +144,11 @@ export function NewsInfiniteList({
                 ) : (
                   n.companies.map((c) => (
                     <Link key={c.id} href={`/companies/${c.id}`}>
-                      <Badge size="md" tone="accent">
+                      <Badge
+                        size="md"
+                        bg={avatarBackground(c.color, c.ticker)}
+                        ink={avatarInk(c.color)}
+                      >
                         {c.ticker}
                       </Badge>
                     </Link>

@@ -283,7 +283,7 @@ export interface NewsListItem {
   publishedAt: string | null;
   read: boolean;
   sourceName: string | null;
-  companies: { id: number; ticker: string }[];
+  companies: { id: number; ticker: string; color: string | null }[];
 }
 
 // Kursor keyset — ostatni element zwróconej porcji. Para
@@ -397,15 +397,19 @@ export function listNews(opts: {
       newsId: newsCompany.newsId,
       companyId: companies.id,
       ticker: companies.ticker,
+      color: companies.color,
     })
     .from(newsCompany)
     .innerJoin(companies, eq(companies.id, newsCompany.companyId))
     .where(inArray(newsCompany.newsId, baseIds))
     .all();
-  const matchesByNews = new Map<number, { id: number; ticker: string }[]>();
+  const matchesByNews = new Map<
+    number,
+    { id: number; ticker: string; color: string | null }[]
+  >();
   for (const m of matches) {
     const arr = matchesByNews.get(m.newsId) ?? [];
-    arr.push({ id: m.companyId, ticker: m.ticker });
+    arr.push({ id: m.companyId, ticker: m.ticker, color: m.color });
     matchesByNews.set(m.newsId, arr);
   }
 

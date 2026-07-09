@@ -93,10 +93,17 @@ export function Badge({
   children,
   tone = "neutral",
   size = "sm",
+  bg,
+  ink,
 }: {
   children: ReactNode;
   tone?: "neutral" | "accent" | "pos" | "neg" | "warn";
   size?: "sm" | "md";
+  // Wypełnione tło inline (kolor spółki — CompanyLogo/badge newsów). Gdy
+  // ustawione, nadpisuje klasy `tone` zamiast się z nimi łączyć; bez `bg`
+  // zachowanie jest identyczne jak wcześniej. Patrz docs/plans/kolor-spolki.md.
+  bg?: string;
+  ink?: string;
 }) {
   const tones: Record<string, string> = {
     neutral: "bg-surface2 text-ink2 border-border2",
@@ -111,7 +118,8 @@ export function Badge({
   };
   return (
     <span
-      className={`inline-flex items-center rounded-md border font-medium ${tones[tone]} ${sizes[size]}`}
+      className={`inline-flex items-center rounded-md border font-medium ${bg ? "border-transparent" : tones[tone]} ${sizes[size]}`}
+      style={bg ? { background: bg, color: ink } : undefined}
     >
       {children}
     </span>

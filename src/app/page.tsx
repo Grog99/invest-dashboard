@@ -20,6 +20,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import type { ReactNode } from "react";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { getLogoFlags } from "@/lib/logos";
+import { avatarBackground, avatarInk } from "@/lib/companyColor";
 
 export const dynamic = "force-dynamic";
 
@@ -161,8 +162,14 @@ export default function DashboardPage() {
                       name={c.ticker}
                       companyId={c.id}
                       hasLogo={newsLogoFlags.get(c.id) ?? false}
+                      color={c.color}
                     />
-                    <Badge tone="accent">{c.ticker}</Badge>
+                    <Badge
+                      bg={avatarBackground(c.color, c.ticker)}
+                      ink={avatarInk(c.color)}
+                    >
+                      {c.ticker}
+                    </Badge>
                   </Link>
                 ))}
               </div>
@@ -402,6 +409,7 @@ export default function DashboardPage() {
                 data={summary.holdings.map((h) => ({
                   name: h.company.ticker,
                   value: h.valuePln ?? 0,
+                  color: h.company.color,
                 }))}
               />
             </Card>

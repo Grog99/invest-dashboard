@@ -27,6 +27,11 @@ export const companies = sqliteTable("companies", {
   // Nullable: gdy puste, resolveLogo() spada na TICKER_DOMAINS albo Wikidata
   // po nazwie. Patrz docs/plans/ikonki-spolek.md.
   domain: text("domain"),
+  // Kolor spółki — token presetu ("cat-1".."cat-8","cat-other") albo własny
+  // "#rrggbb", nullable (brak = fallback na deterministyczny hash tickera,
+  // jak dziś). Format/walidacja/resolvery: src/lib/companyColor.ts. Patrz
+  // docs/plans/kolor-spolki.md.
+  color: text("color"),
   createdAt: text("created_at").notNull(),
 });
 

@@ -127,6 +127,7 @@ export default function PortfolioPage() {
                           name={h.company.name}
                           companyId={h.company.id}
                           hasLogo={logoFlags.get(h.company.id) ?? false}
+                          color={h.company.color}
                         />
                         <span>
                           <Link
@@ -180,6 +181,7 @@ export default function PortfolioPage() {
                         name={h.company.name}
                         companyId={h.company.id}
                         hasLogo={logoFlags.get(h.company.id) ?? false}
+                        color={h.company.color}
                       />
                       <div className="min-w-0">
                         <Link
@@ -462,6 +464,7 @@ export default function PortfolioPage() {
                         name={companyById.get(s.companyId)?.name ?? s.ticker}
                         companyId={s.companyId}
                         hasLogo={logoFlags.get(s.companyId) ?? false}
+                        color={companyById.get(s.companyId)?.color ?? null}
                       />
                       <Link
                         href={`/companies/${s.companyId}`}
@@ -503,6 +506,7 @@ export default function PortfolioPage() {
                       name={companyById.get(s.companyId)?.name ?? s.ticker}
                       companyId={s.companyId}
                       hasLogo={logoFlags.get(s.companyId) ?? false}
+                      color={companyById.get(s.companyId)?.color ?? null}
                     />
                     <div>
                       <Link
@@ -567,6 +571,7 @@ export default function PortfolioPage() {
                         name={companyById.get(d.companyId)?.name ?? d.ticker}
                         companyId={d.companyId}
                         hasLogo={logoFlags.get(d.companyId) ?? false}
+                        color={companyById.get(d.companyId)?.color ?? null}
                       />
                       <span className="font-medium">{d.ticker}</span>
                     </span>
@@ -612,6 +617,7 @@ export default function PortfolioPage() {
                       name={companyById.get(d.companyId)?.name ?? d.ticker}
                       companyId={d.companyId}
                       hasLogo={logoFlags.get(d.companyId) ?? false}
+                      color={companyById.get(d.companyId)?.color ?? null}
                     />
                     <div>
                       <span className="font-medium">{d.ticker}</span>
@@ -685,6 +691,7 @@ export default function PortfolioPage() {
                               name={c.name}
                               companyId={c.id}
                               hasLogo={logoFlags.get(c.id) ?? false}
+                              color={c.color}
                             />
                           )}
                           <span className="font-medium">{c?.ticker ?? "?"}</span>
@@ -741,6 +748,7 @@ export default function PortfolioPage() {
                             name={c.name}
                             companyId={c.id}
                             hasLogo={logoFlags.get(c.id) ?? false}
+                            color={c.color}
                           />
                         )}
                         <div>

@@ -114,6 +114,7 @@ export default function WatchlistPage() {
                             name={c.name}
                             companyId={c.id}
                             hasLogo={logoFlags.get(c.id) ?? false}
+                            color={c.color}
                           />
                           <span>
                             <Link
@@ -189,6 +190,7 @@ export default function WatchlistPage() {
                           name={c.name}
                           companyId={c.id}
                           hasLogo={logoFlags.get(c.id) ?? false}
+                          color={c.color}
                         />
                         <div>
                           <Link
