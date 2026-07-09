@@ -61,7 +61,7 @@ Utwórz i przełącz się na `feature/<slug>` z brancha bazowego (`git switch -c
 Zamiast jednego implementera odpalasz **warstwowy orkiestrator** — implementacja idzie dane → API → UI, z przekazaniem strukturyzowanego kontekstu między warstwami (nazwy tabel/funkcji → endpointy → UI). To ten sam mechanizm co skill `/implement-feature`.
 
 1. Z sekcji `## Pliki do zmiany` w `docs/plans/<slug>.md` wykryj obecne warstwy (`dane` = „Baza"/„Logika", `api` = „API", `ui` = „UI”); pomiń warstwy oznaczone `— brak —`.
-2. Wywołaj narzędzie **`Workflow`** z `name: 'implement-layered'` (albo `scriptPath: '.claude/workflows/implement-layered.js'`) i `args: { planPath: 'docs/plans/<slug>.md', layers: [<wykryte>] }`. Wywołanie tego skilla jest ważnym opt-inem do Workflow — bez Ultracode i słowa-klucza.
+2. Wywołaj narzędzie **`Workflow`** z `name: 'implement-layered'` (albo `scriptPath: '.claude/workflows/implement-layered.js'`) i `args: { planPath: 'docs/plans/<slug>.md', layers: [<wykryte>] }`. Wywołanie tego skilla jest ważnym opt-inem do Workflow — bez Ultracode i słowa-klucza. Przekaż `args` jako zwykły obiekt (nie stringuj ręcznie) — harness i tak potrafi zserializować `args` do JSON-stringa, a skrypt to normalizuje (parsuje string z powrotem), więc żadne obejście z literalną ścieżką planu nie jest potrzebne.
 3. Poczekaj na `<task-notification>`, odczytaj zwrócony `{ data, api, ui, verify }`. Workflow domyka lint/build w pętli; jeśli `verify` nie jest zielone, przejdź do kroku 8 z tymi błędami.
 
 Fallback: dla bardzo małego featurea (jedna warstwa) możesz zamiast workflowa uruchomić pojedynczy `Agent` (`general-purpose`, `sonnet`) z tym samym promptem — przeczytaj plan + `AGENTS.md`/`CLAUDE.md` + docs Next.js, reużyj utility, zwróć listę zmian.

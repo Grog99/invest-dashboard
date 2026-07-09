@@ -13,9 +13,23 @@ export const meta = {
 // --- Wejscie ze skilla: { planPath, layers } ---
 // planPath: sciezka do docs/plans/<slug>.md
 // layers:   podzbior ['dane','api','ui'] w kolejnosci; puste => wszystkie trzy
-const planPath = args && args.planPath
-if (!planPath) throw new Error('args.planPath jest wymagane (sciezka do pliku planu)')
-const wanted = (args && Array.isArray(args.layers) && args.layers.length) ? args.layers : ['dane', 'api', 'ui']
+//
+// UWAGA: parametr `args` toola Workflow bywa dostarczany do skryptu jako JSON-string,
+// a nie jako gotowy obiekt (zaobserwowane: `typeof args === 'string'`). Bez normalizacji
+// `args.planPath` jest wtedy undefined i workflow padal natychmiast z 0 agentow.
+// Dlatego: jesli args jest stringiem, probujemy go sparsowac, i dopiero potem czytamy pola.
+let input = args
+if (typeof input === 'string') {
+  try { input = JSON.parse(input) } catch (e) { /* zostaw jako string — obsluzy walidacja nizej */ }
+}
+const planPath = (input && typeof input === 'object') ? input.planPath : undefined
+if (!planPath) {
+  throw new Error(
+    'args.planPath jest wymagane (sciezka do pliku planu). ' +
+    'Otrzymano args typu "' + typeof args + '": ' + JSON.stringify(args)
+  )
+}
+const wanted = (input && Array.isArray(input.layers) && input.layers.length) ? input.layers : ['dane', 'api', 'ui']
 const present = new Set(wanted)
 
 // --- Reguly wspolne (wstrzykiwane w prompty) ---

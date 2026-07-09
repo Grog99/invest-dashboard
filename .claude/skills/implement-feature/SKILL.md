@@ -36,7 +36,7 @@ Zbuduj `layers` jako uporzadkowana liste tylko tych warstw, ktore maja realne pl
 Wywolaj narzedzie **`Workflow`**:
 
 - `name: 'implement-layered'` (skrypt w `.claude/workflows/implement-layered.js`). Gdyby nazwa sie nie rozwiazala, uzyj `scriptPath: '.claude/workflows/implement-layered.js'`.
-- `args: { planPath: '<planPath>', layers: [<wykryte warstwy>] }`.
+- `args: { planPath: '<planPath>', layers: [<wykryte warstwy>] }`. Przekaz `args` jako zwykly obiekt — nie stringuj recznie. Harness potrafi zserializowac `args` do JSON-stringa, ale skrypt sam normalizuje (parsuje string), wiec obejscie z literalna sciezka planu nie jest potrzebne.
 
 Workflow implementuje warstwy po kolei (dane -> API -> UI), przekazujac miedzy nimi strukturyzowany opis (tabele/typy/funkcje -> endpointy -> UI), i konczy ograniczona petla `npm run lint` + `npm run build` z delegowana naprawa. Poczekaj na zakonczenie (dostaniesz `<task-notification>`), potem odczytaj zwrocony obiekt `{ data, api, ui, verify }`.
 
