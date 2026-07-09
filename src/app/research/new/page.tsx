@@ -3,6 +3,7 @@ import { asc } from "drizzle-orm";
 import { PageHeader, Card } from "@/components/ui";
 import { NoteEditor } from "@/components/NoteEditor";
 import { buildTemplateOptions } from "@/lib/templates";
+import { getAiConfig } from "@/lib/ai";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function NewNotePage({
     .orderBy(asc(noteTemplates.name))
     .all();
   const templateOptions = buildTemplateOptions(userTemplates);
+  const { model: defaultModel } = getAiConfig();
 
   return (
     <div>
@@ -32,6 +34,7 @@ export default async function NewNotePage({
           companies={allCompanies}
           defaultCompanyId={sp.companyId ? Number(sp.companyId) : undefined}
           templates={templateOptions}
+          defaultModel={defaultModel}
         />
       </Card>
     </div>

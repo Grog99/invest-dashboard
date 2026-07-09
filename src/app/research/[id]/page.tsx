@@ -5,6 +5,7 @@ import { fmtDateTime } from "@/lib/format";
 import { PageHeader, Card } from "@/components/ui";
 import { NoteEditor } from "@/components/NoteEditor";
 import { DeleteButton } from "@/components/DeleteButton";
+import { getAiConfig } from "@/lib/ai";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function NotePage({
     .from(companies)
     .orderBy(asc(companies.ticker))
     .all();
+  const { model: defaultModel } = getAiConfig();
 
   return (
     <div>
@@ -38,7 +40,7 @@ export default async function NotePage({
         }
       />
       <Card>
-        <NoteEditor note={note} companies={allCompanies} />
+        <NoteEditor note={note} companies={allCompanies} defaultModel={defaultModel} />
       </Card>
     </div>
   );

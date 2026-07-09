@@ -117,17 +117,49 @@ Odpowiadasz po polsku, konkretnie i rzeczowo. Gdy czegoś nie wiesz lub dane mog
 Nie udzielasz porad inwestycyjnych w sensie prawnym; przedstawiasz analizę i argumenty, decyzja należy do użytkownika.
 Formatuj odpowiedzi w markdown.`;
 
+// Prompt trybu „Wygeneruj od zera" (dawniej stała lokalna w NoteEditor.tsx) —
+// analiza spółki jako punkt wyjścia do researchu. Wymaga companyId (kontekst
+// spółki doklejany do systemu przez buildCompanyContext).
+export const AI_RESEARCH_PROMPT = `Przygotuj analizę tej spółki jako punkt wyjścia do mojego researchu. Uwzględnij:
+1. Profil działalności i model biznesowy
+2. Kluczowe wnioski z ostatnich newsów (jeśli są w kontekście)
+3. Mocne strony i przewagi konkurencyjne
+4. Ryzyka i słabości
+5. Katalizatory i na co zwracać uwagę w najbliższym czasie
+Bądź konkretny. Jeśli czegoś nie wiesz na pewno — zaznacz to.`;
+
+// Prompt trybu „Uzupełnij szkic" — szkic notatki (markdown, może zawierać
+// szablon z pustymi sekcjami) idzie jako treść wiadomości user zaraz po tej
+// instrukcji. Odpowiedź modelu ma być KOMPLETNĄ notatką, którą klient
+// nadpisuje w całości (bez doklejania nagłówka „---").
+export const FILL_DRAFT_INSTRUCTION = `Poniżej szkic notatki użytkownika (markdown, może zawierać szablon z pustymi sekcjami). Uzupełnij i dokończ go: wypełnij puste sekcje, zachowaj istniejącą treść i strukturę nagłówków, nie dodawaj komentarzy poza treścią notatki. Zwróć KOMPLETNĄ notatkę w markdown — całość nadpisze bieżącą.`;
+
+// Zdanie doklejane do system promptu, gdy użytkownik włączy web search w
+// modalu „Analiza AI" — wzmacnia instrukcję z pluginu `web`, żeby model
+// faktycznie z niego skorzystał i cytował źródła linkami markdown.
+export const webSearchSystemHint = `Masz dostęp do web searchu — użyj go, aby zweryfikować bieżące fakty (kursy, newsy, wyniki) i cytuj źródła linkami markdown.`;
+
+// Zwraca tablicę `plugins` do body OpenRoutera dla web searchu (id "web"
+// dosłownie — potwierdzone w docs OpenRoutera), albo undefined gdy wyłączony.
+function buildWebPlugins(
+  webSearch?: boolean
+): Array<{ id: "web"; max_results: number }> | undefined {
+  return webSearch ? [{ id: "web", max_results: 5 }] : undefined;
+}
+
 // Wywołanie OpenRouter — zwraca surowy Response (SSE przy stream: true).
 export async function openrouterChat(
   messages: ChatMessage[],
-  options: { stream?: boolean } = {}
+  options: { stream?: boolean; model?: string; webSearch?: boolean } = {}
 ): Promise<Response> {
-  const { apiKey, model } = getAiConfig();
+  const { apiKey, model: defaultModel } = getAiConfig();
   if (!apiKey) {
     throw new Error(
       "Brak klucza OpenRouter. Dodaj klucz API w Ustawieniach."
     );
   }
+  const model = options.model?.trim() || defaultModel;
+  const plugins = buildWebPlugins(options.webSearch);
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -140,8 +172,9 @@ export async function openrouterChat(
       model,
       messages,
       stream: options.stream ?? false,
+      ...(plugins ? { plugins } : {}),
     }),
-    signal: AbortSignal.timeout(120000),
+    signal: AbortSignal.timeout(180000),
   });
   if (!res.ok) {
     let detail = `HTTP ${res.status}`;

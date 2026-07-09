@@ -1,23 +1,15 @@
 "use client";
 
 // Edytor notatki researchowej: markdown + podgląd, przypisanie do spółki,
-// generowanie analizy AI (streaming do treści).
+// analiza AI przez modal (non-streaming, patrz AiAnalyzeModal + /api/ai/analyze).
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Label, Select } from "./ui";
 import { Markdown } from "./Markdown";
-import { streamChat } from "@/lib/sse";
+import { AiAnalyzeModal } from "./AiAnalyzeModal";
 import type { Company, Note } from "@/db/schema";
 import type { TemplateOption } from "@/lib/templates";
-
-const AI_RESEARCH_PROMPT = `Przygotuj analizę tej spółki jako punkt wyjścia do mojego researchu. Uwzględnij:
-1. Profil działalności i model biznesowy
-2. Kluczowe wnioski z ostatnich newsów (jeśli są w kontekście)
-3. Mocne strony i przewagi konkurencyjne
-4. Ryzyka i słabości
-5. Katalizatory i na co zwracać uwagę w najbliższym czasie
-Bądź konkretny. Jeśli czegoś nie wiesz na pewno — zaznacz to.`;
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 // Dopasowuje linię z pojedynczym markdownowym obrazem załącznika, np.
@@ -39,11 +31,13 @@ export function NoteEditor({
   companies,
   defaultCompanyId,
   templates,
+  defaultModel,
 }: {
   note?: Note;
   companies: Company[];
   defaultCompanyId?: number;
   templates?: TemplateOption[];
+  defaultModel: string;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(note?.title ?? "");
@@ -53,7 +47,7 @@ export function NoteEditor({
   const [content, setContent] = useState(note?.content ?? "");
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [aiBusy, setAiBusy] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [deleteAttachmentBusy, setDeleteAttachmentBusy] = useState(false);
   const [activeAttachmentId, setActiveAttachmentId] = useState<number | null>(null);
@@ -101,32 +95,20 @@ export function NoteEditor({
     setContent(option.content);
   };
 
-  const generateAi = async () => {
-    if (!companyId) {
-      setMessage("Wybierz spółkę, aby wygenerować analizę AI.");
-      return;
-    }
-    setAiBusy(true);
+  // Tryb "Uzupełnij szkic" (AiAnalyzeModal) — cała odpowiedź NADPISUJE treść.
+  const handleFillResult = (text: string) => {
+    setPreview(false);
+    setContent(text);
     setMessage(null);
+  };
+
+  // Tryb "Wygeneruj od zera" (AiAnalyzeModal) — DOKLEJA po nagłówku "---".
+  const handleGenerateResult = (text: string) => {
     setPreview(false);
     const company = companies.find((c) => String(c.id) === companyId);
     const header = `\n\n---\n\n## Analiza AI — ${company?.ticker ?? ""} (${new Date().toLocaleDateString("pl-PL")})\n\n`;
-    setContent((prev) => (prev.trim() ? prev + header : header.trimStart()));
-    try {
-      await streamChat(
-        {
-          messages: [{ role: "user", content: AI_RESEARCH_PROMPT }],
-          companyId: Number(companyId),
-        },
-        (delta) => setContent((prev) => prev + delta)
-      );
-    } catch (e) {
-      setMessage(
-        `Błąd AI: ${e instanceof Error ? e.message : String(e)}`
-      );
-    } finally {
-      setAiBusy(false);
-    }
+    setContent((prev) => (prev.trim() ? prev + header + text : header.trimStart() + text));
+    setMessage(null);
   };
 
   // Wstawia `snippet` w miejscu kursora w textarea (fallback: doklej na
@@ -333,11 +315,9 @@ export function NoteEditor({
           <Button
             size="sm"
             variant="secondary"
-            onClick={generateAi}
-            disabled={aiBusy || !companyId}
-            title={!companyId ? "Wybierz spółkę, aby użyć AI" : undefined}
+            onClick={() => setAiModalOpen(true)}
           >
-            {aiBusy ? "Generuję…" : "✦ Generuj analizę AI"}
+            ✦ Analiza AI
           </Button>
         </div>
       </div>
@@ -370,6 +350,18 @@ export function NoteEditor({
           {busy ? "Zapisuję…" : "Zapisz notatkę"}
         </Button>
       </div>
+
+      <AiAnalyzeModal
+        open={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        content={content}
+        companies={companies}
+        companyId={companyId}
+        onCompanyIdChange={setCompanyId}
+        defaultModel={defaultModel}
+        onFillResult={handleFillResult}
+        onGenerateResult={handleGenerateResult}
+      />
     </div>
   );
 }
