@@ -153,6 +153,17 @@ export const notes = sqliteTable("notes", {
   updatedAt: text("updated_at").notNull(),
 });
 
+// Własne (edytowalne) szablony notatek. Szablony WBUDOWANE są stałymi w
+// src/lib/templates.ts i NIE trafiają tu — ta tabela to wyłącznie CRUD
+// użytkownika (patrz docs/plans/szablony-tez-inwestycyjnych.md).
+export const noteTemplates = sqliteTable("note_templates", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  content: text("content").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -199,3 +210,4 @@ export type NewsItem = typeof newsItems.$inferSelect;
 export type Note = typeof notes.$inferSelect;
 export type NoteAttachment = typeof noteAttachments.$inferSelect;
 export type CompanyLogo = typeof companyLogos.$inferSelect;
+export type NoteTemplate = typeof noteTemplates.$inferSelect;

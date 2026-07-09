@@ -1,4 +1,4 @@
-import { db, companies } from "@/db";
+import { db, companies, noteTemplates } from "@/db";
 import { asc } from "drizzle-orm";
 import {
   getSetting,
@@ -7,10 +7,12 @@ import {
   DEFAULT_CRON,
 } from "@/lib/settings";
 import { seedDefaultSourcesIfEmpty } from "@/lib/news";
+import { BUILTIN_TEMPLATES } from "@/lib/templates";
 import { Card, PageHeader } from "@/components/ui";
 import { AiSettingsForm } from "@/components/AiSettingsForm";
 import { ScheduleSettingsForm } from "@/components/ScheduleSettingsForm";
 import { SourcesManager } from "@/components/SourcesManager";
+import { TemplatesManager } from "@/components/TemplatesManager";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,11 @@ export default function SettingsPage() {
     .select()
     .from(companies)
     .orderBy(asc(companies.ticker))
+    .all();
+  const userTemplates = db
+    .select()
+    .from(noteTemplates)
+    .orderBy(asc(noteTemplates.name))
     .all();
 
   return (
@@ -50,6 +57,10 @@ export default function SettingsPage() {
 
         <Card title="Źródła newsów (RSS)">
           <SourcesManager sources={sources} companies={allCompanies} />
+        </Card>
+
+        <Card title="Szablony notatek">
+          <TemplatesManager templates={userTemplates} builtins={BUILTIN_TEMPLATES} />
         </Card>
 
         <Card title="Dane">
