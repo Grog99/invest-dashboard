@@ -14,22 +14,52 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params;
   const body = await req.json();
 
+  // Walidacja jak w POST (src/app/api/cfd/route.ts): niepoprawne wartości
+  // ODRZUCAMY (400), nie pomijamy po cichu — inaczej klient dostaje 200 z
+  // niezmienionym polem i myśli, że zapisał.
   const updates: Partial<typeof cfdPositions.$inferInsert> = {};
-  if (body.direction === "LONG" || body.direction === "SHORT") {
+  if (body.direction !== undefined) {
+    if (body.direction !== "LONG" && body.direction !== "SHORT") {
+      return NextResponse.json(
+        { error: "Kierunek musi być LONG albo SHORT." },
+        { status: 400 }
+      );
+    }
     updates.direction = body.direction;
   }
   if (body.name !== undefined) {
     const name = String(body.name).trim();
     if (name) updates.name = name;
   }
-  if (body.volume !== undefined && Number(body.volume) > 0) {
-    updates.volume = Number(body.volume);
+  if (body.volume !== undefined) {
+    const volume = Number(body.volume);
+    if (!(volume > 0)) {
+      return NextResponse.json(
+        { error: "Wolumen musi być liczbą dodatnią." },
+        { status: 400 }
+      );
+    }
+    updates.volume = volume;
   }
-  if (body.openPrice !== undefined && Number(body.openPrice) > 0) {
-    updates.openPrice = Number(body.openPrice);
+  if (body.openPrice !== undefined) {
+    const openPrice = Number(body.openPrice);
+    if (!(openPrice > 0)) {
+      return NextResponse.json(
+        { error: "Cena otwarcia musi być liczbą dodatnią." },
+        { status: 400 }
+      );
+    }
+    updates.openPrice = openPrice;
   }
-  if (body.pointValue !== undefined && Number(body.pointValue) > 0) {
-    updates.pointValue = Number(body.pointValue);
+  if (body.pointValue !== undefined) {
+    const pointValue = Number(body.pointValue);
+    if (!(pointValue > 0)) {
+      return NextResponse.json(
+        { error: "Wartość punktu musi być liczbą dodatnią." },
+        { status: 400 }
+      );
+    }
+    updates.pointValue = pointValue;
   }
   if (body.quoteSymbol !== undefined) {
     const quoteSymbol = String(body.quoteSymbol).trim().toUpperCase();
@@ -38,27 +68,57 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       updates.symbol = deriveSymbol(quoteSymbol);
     }
   }
-  if (
-    typeof body.openedAt === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(body.openedAt)
-  ) {
+  if (body.openedAt !== undefined) {
+    if (
+      typeof body.openedAt !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(body.openedAt)
+    ) {
+      return NextResponse.json(
+        { error: "Data otwarcia musi być w formacie RRRR-MM-DD." },
+        { status: 400 }
+      );
+    }
     updates.openedAt = body.openedAt;
   }
   // Override — undefined = nie dotykaj, null/"" = wyczyść, liczba = ustaw.
   if (body.overridePrice !== undefined) {
-    updates.overridePrice =
-      body.overridePrice === null || body.overridePrice === ""
-        ? null
-        : Number(body.overridePrice);
+    if (body.overridePrice === null || body.overridePrice === "") {
+      updates.overridePrice = null;
+    } else {
+      const overridePrice = Number(body.overridePrice);
+      if (!Number.isFinite(overridePrice)) {
+        return NextResponse.json(
+          { error: "Nieprawidłowa wartość nadpisania kursu." },
+          { status: 400 }
+        );
+      }
+      updates.overridePrice = overridePrice;
+    }
   }
   if (body.overridePnl !== undefined) {
-    updates.overridePnl =
-      body.overridePnl === null || body.overridePnl === ""
-        ? null
-        : Number(body.overridePnl);
+    if (body.overridePnl === null || body.overridePnl === "") {
+      updates.overridePnl = null;
+    } else {
+      const overridePnl = Number(body.overridePnl);
+      if (!Number.isFinite(overridePnl)) {
+        return NextResponse.json(
+          { error: "Nieprawidłowa wartość nadpisania P&L." },
+          { status: 400 }
+        );
+      }
+      updates.overridePnl = overridePnl;
+    }
   }
   if (body.note !== undefined) {
     updates.note = String(body.note).trim() || null;
+  }
+
+  // Pusty set() wygenerowałby "UPDATE ... SET WHERE" → błąd składni SQLite (500).
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json(
+      { error: "Brak pól do aktualizacji." },
+      { status: 400 }
+    );
   }
 
   const updated = db
