@@ -138,6 +138,14 @@ CREATE TABLE IF NOT EXISTS company_logos (
   checked_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS note_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS cfd_positions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   symbol TEXT NOT NULL,

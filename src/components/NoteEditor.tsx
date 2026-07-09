@@ -9,6 +9,7 @@ import { Button, Input, Label, Select } from "./ui";
 import { Markdown } from "./Markdown";
 import { streamChat } from "@/lib/sse";
 import type { Company, Note } from "@/db/schema";
+import type { TemplateOption } from "@/lib/templates";
 
 const AI_RESEARCH_PROMPT = `Przygotuj analizę tej spółki jako punkt wyjścia do mojego researchu. Uwzględnij:
 1. Profil działalności i model biznesowy
@@ -37,10 +38,12 @@ export function NoteEditor({
   note,
   companies,
   defaultCompanyId,
+  templates,
 }: {
   note?: Note;
   companies: Company[];
   defaultCompanyId?: number;
+  templates?: TemplateOption[];
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(note?.title ?? "");
@@ -55,6 +58,7 @@ export function NoteEditor({
   const [deleteAttachmentBusy, setDeleteAttachmentBusy] = useState(false);
   const [activeAttachmentId, setActiveAttachmentId] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [templateKey, setTemplateKey] = useState("");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +89,16 @@ export function NoteEditor({
     } finally {
       setBusy(false);
     }
+  };
+
+  // Wstawia treść wybranego szablonu (wbudowanego lub własnego) jako całą
+  // treść notatki i resetuje select do placeholdera "— wstaw szablon —" —
+  // patrz docs/plans/szablony-tez-inwestycyjnych.md, sekcja „Podejście" pkt 3.
+  const applyTemplate = (key: string) => {
+    const option = templates?.find((t) => t.key === key);
+    setTemplateKey("");
+    if (!option) return;
+    setContent(option.content);
   };
 
   const generateAi = async () => {
@@ -233,6 +247,46 @@ export function NoteEditor({
           </Select>
         </div>
       </div>
+
+      {!note && templates && templates.length > 0 && (
+        <div>
+          <Label htmlFor="ne-template">Szablon</Label>
+          <Select
+            id="ne-template"
+            value={templateKey}
+            onChange={(e) => applyTemplate(e.target.value)}
+            disabled={content.trim().length > 0}
+            className="w-full sm:max-w-xs"
+          >
+            <option value="">— wstaw szablon —</option>
+            <optgroup label="Wbudowane">
+              {templates
+                .filter((t) => t.group === "builtin")
+                .map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.label}
+                  </option>
+                ))}
+            </optgroup>
+            {templates.some((t) => t.group === "user") && (
+              <optgroup label="Moje szablony">
+                {templates
+                  .filter((t) => t.group === "user")
+                  .map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+          </Select>
+          <p className="mt-1 text-[11px] text-muted">
+            {content.trim().length > 0
+              ? "Dostępne, gdy treść notatki jest pusta."
+              : "Wstawia gotowy szkielet markdown do dalszej edycji."}
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-lg border border-border bg-surface2 p-0.5">

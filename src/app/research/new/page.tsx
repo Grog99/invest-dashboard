@@ -1,7 +1,8 @@
-import { db, companies } from "@/db";
+import { db, companies, noteTemplates } from "@/db";
 import { asc } from "drizzle-orm";
 import { PageHeader, Card } from "@/components/ui";
 import { NoteEditor } from "@/components/NoteEditor";
+import { buildTemplateOptions } from "@/lib/templates";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,12 @@ export default async function NewNotePage({
     .from(companies)
     .orderBy(asc(companies.ticker))
     .all();
+  const userTemplates = db
+    .select()
+    .from(noteTemplates)
+    .orderBy(asc(noteTemplates.name))
+    .all();
+  const templateOptions = buildTemplateOptions(userTemplates);
 
   return (
     <div>
@@ -24,6 +31,7 @@ export default async function NewNotePage({
         <NoteEditor
           companies={allCompanies}
           defaultCompanyId={sp.companyId ? Number(sp.companyId) : undefined}
+          templates={templateOptions}
         />
       </Card>
     </div>
