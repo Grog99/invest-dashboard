@@ -8,7 +8,9 @@ import {
   dividends,
   quotesDaily,
   quotesLatest,
+  cfdPositions,
   type Company,
+  type CfdPosition,
 } from "@/db";
 import { and, eq, gt, lt, desc, sql } from "drizzle-orm";
 import { fetchChart } from "./yahoo";
@@ -108,6 +110,18 @@ async function refreshCompany(company: Company): Promise<boolean> {
   return true;
 }
 
+// CFD nie ma historii OHLC w Yahoo (WIG20.WA zwraca tylko bieżącą cenę) —
+// zapisujemy WYŁĄCZNIE quote_price/quote_updated_at, bez quotes_daily.
+async function refreshCfdPosition(position: CfdPosition): Promise<boolean> {
+  const chart = await fetchChart(position.quoteSymbol);
+  if (chart.price === null) return false;
+  db.update(cfdPositions)
+    .set({ quotePrice: chart.price, quoteUpdatedAt: nowISO() })
+    .where(eq(cfdPositions.id, position.id))
+    .run();
+  return true;
+}
+
 export interface RefreshResult {
   updated: number;
   errors: { company: string; message: string }[];
@@ -123,7 +137,11 @@ export async function refreshQuotes(
   }
 
   const result: RefreshResult = { updated: 0, errors: [] };
-  if (list.length === 0) return result;
+  // Pozycje CFD odświeżane tylko przy pełnym odświeżeniu (bez companyIds) —
+  // wąskie odświeżenie pojedynczej spółki (np. zaraz po jej dodaniu) nie
+  // powinno przy okazji bić w Yahoo po WIG20.WA za każdym razem.
+  const cfdList = companyIds ? [] : db.select().from(cfdPositions).all();
+  if (list.length === 0 && cfdList.length === 0) return result;
 
   // 1. Kursy walut — od najwcześniejszej transakcji/dywidendy (potrzebne do
   //    kursów D-1 pod PIT), minimum 2 lata wstecz pod wykresy.
@@ -159,6 +177,19 @@ export async function refreshQuotes(
     } catch (e) {
       result.errors.push({
         company: company.ticker,
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  // 3. Pozycje CFD — tylko bieżąca cena (WIG20.WA w PLN, bez FX). Błąd per
+  // pozycja trafia do result.errors i nie wywala odświeżania spółek powyżej.
+  for (const position of cfdList) {
+    try {
+      if (await refreshCfdPosition(position)) result.updated++;
+    } catch (e) {
+      result.errors.push({
+        company: position.name,
         message: e instanceof Error ? e.message : String(e),
       });
     }

@@ -189,6 +189,31 @@ export const companyLogos = sqliteTable("company_logos", {
   checkedAt: text("checked_at").notNull(),
 });
 
+// Pozycje CFD — ręcznie wprowadzane, osobny byt POZA silnikiem FIFO/PIT-38
+// (computePortfolio/computeYearlyTax w src/lib/portfolio.ts ich nie widzą).
+// Cena bieżąca dociągana z Yahoo po własnym quoteSymbol (domyślnie
+// "WIG20.WA") — bez FK do companies, bez zapisu do quotes_daily/quotes_latest
+// (patrz src/lib/cfd.ts, src/lib/quotes.ts, docs/plans/pozycja-cfd.md).
+export const cfdPositions = sqliteTable("cfd_positions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  symbol: text("symbol").notNull(), // krótka etykieta, np. "WIG20"
+  name: text("name").notNull(), // np. "CFD WIG20"
+  direction: text("direction").notNull(), // LONG | SHORT
+  volume: real("volume").notNull(), // loty
+  openPrice: real("open_price").notNull(), // pkt
+  pointValue: real("point_value").notNull(), // PLN/pkt na 1 lot
+  quoteSymbol: text("quote_symbol").notNull().default("WIG20.WA"),
+  openedAt: text("opened_at").notNull(), // YYYY-MM-DD
+  // Nadpisanie "wg XTB" — override_pnl wygrywa nad override_price, oba
+  // wygrywają nad quote_price (patrz computeCfdPositions w src/lib/cfd.ts).
+  overridePrice: real("override_price"),
+  overridePnl: real("override_pnl"),
+  quotePrice: real("quote_price"),
+  quoteUpdatedAt: text("quote_updated_at"),
+  note: text("note"),
+  createdAt: text("created_at").notNull(),
+});
+
 export type Company = typeof companies.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
 export type Dividend = typeof dividends.$inferSelect;
@@ -199,3 +224,4 @@ export type NewsItem = typeof newsItems.$inferSelect;
 export type Note = typeof notes.$inferSelect;
 export type NoteAttachment = typeof noteAttachments.$inferSelect;
 export type CompanyLogo = typeof companyLogos.$inferSelect;
+export type CfdPosition = typeof cfdPositions.$inferSelect;
