@@ -56,13 +56,15 @@ Pokaż użytkownikowi zwięzłe podsumowanie finalnego planu i zapytaj wprost o 
 
 Utwórz i przełącz się na `feature/<slug>` z brancha bazowego (`git switch -c feature/<slug>`). Commit pliku planu może iść tutaj lub razem z implementacją.
 
-## Krok 7 — Subagent-implementer (Sonnet)
+## Krok 7 — Implementacja warstwowa (workflow)
 
-Uruchom `Agent` z `subagent_type: general-purpose`, `model: sonnet`. W prompcie przekaż ścieżkę `docs/plans/<slug>.md` i zadania:
+Zamiast jednego implementera odpalasz **warstwowy orkiestrator** — implementacja idzie dane → API → UI, z przekazaniem strukturyzowanego kontekstu między warstwami (nazwy tabel/funkcji → endpointy → UI). To ten sam mechanizm co skill `/implement-feature`.
 
-1. Przeczytaj plan, `AGENTS.md`, `CLAUDE.md`, a w razie dotykania API Next.js — właściwe pliki w `node_modules/next/dist/docs/`.
-2. Zaimplementuj feature wg planu, **reużywając istniejące utility** wskazane w planie. Prowadź todo-listę dla wieloetapowej pracy.
-3. Zwróć podsumowanie zmian (lista plików) i wszelkie odstępstwa od planu z uzasadnieniem.
+1. Z sekcji `## Pliki do zmiany` w `docs/plans/<slug>.md` wykryj obecne warstwy (`dane` = „Baza"/„Logika", `api` = „API", `ui` = „UI”); pomiń warstwy oznaczone `— brak —`.
+2. Wywołaj narzędzie **`Workflow`** z `name: 'implement-layered'` (albo `scriptPath: '.claude/workflows/implement-layered.js'`) i `args: { planPath: 'docs/plans/<slug>.md', layers: [<wykryte>] }`. Wywołanie tego skilla jest ważnym opt-inem do Workflow — bez Ultracode i słowa-klucza.
+3. Poczekaj na `<task-notification>`, odczytaj zwrócony `{ data, api, ui, verify }`. Workflow domyka lint/build w pętli; jeśli `verify` nie jest zielone, przejdź do kroku 8 z tymi błędami.
+
+Fallback: dla bardzo małego featurea (jedna warstwa) możesz zamiast workflowa uruchomić pojedynczy `Agent` (`general-purpose`, `sonnet`) z tym samym promptem — przeczytaj plan + `AGENTS.md`/`CLAUDE.md` + docs Next.js, reużyj utility, zwróć listę zmian.
 
 ## Krok 8 — Weryfikacja (pętla)
 
