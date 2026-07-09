@@ -164,7 +164,7 @@ Uporządkowana lista propozycji rozwoju invest-dashboardu — od drobnych uspraw
 - **Złożoność:** M
 - **Zależności:** backupy (6.4) powinny objąć też `data/attachments/`.
 
-### 5.2 Osadzone wykresy w notatkach
+### 5.2 Osadzone wykresy w notatkach ✅ ZROBIONE
 - **Opis:** Własna dyrektywa w markdownie, np. blok ` ```chart PKN.WA 1R ``` ` — override komponentu `code` w `src/components/Markdown.tsx` (react-markdown na to pozwala), renderujący istniejący `PriceChart` z danymi z `quotes_daily` dla wskazanego symbolu.
 - **Wartość:** Teza inwestycyjna z żywym wykresem zamiast martwego screena; wykres aktualizuje się sam.
 - **Złożoność:** M
@@ -223,7 +223,7 @@ Uporządkowana lista propozycji rozwoju invest-dashboardu — od drobnych uspraw
 - **Złożoność:** M (głównie przez wykresy)
 - **Zależności:** brak.
 
-### 6.6 PWA / wersja mobilna
+### 6.6 PWA / wersja mobilna ✅ ZROBIONE
 - **Opis:** `manifest.json` + ikony + serwisowalny layout (Sidebar → dolna nawigacja na wąskich ekranach; tabele portfela → karty). Service worker opcjonalny (dane i tak wymagają sieci do localhost/servera).
 - **Wartość:** Szybki podgląd portfela z telefonu — realnie użyteczne dopiero po 6.3 (dostęp spoza localhost).
 - **Złożoność:** M
