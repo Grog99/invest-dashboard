@@ -5,6 +5,7 @@ import {
   benchmarkCloseHistory,
   normalizeComparison,
 } from "@/lib/portfolio";
+import { computeCfdPositions } from "@/lib/cfd";
 import { listNews } from "@/lib/news";
 import { fmtMoney, fmtNumber, fmtPct, fmtSignedMoney, fmtDateTime } from "@/lib/format";
 import { Card, EmptyState, Badge } from "@/components/ui";
@@ -73,6 +74,7 @@ function LedgerRow({
 
 export default function DashboardPage() {
   const summary = computePortfolio();
+  const cfd = computeCfdPositions();
   const history = portfolioValueHistory(365);
   const news = listNews({ limit: 8 });
   const newsLogoFlags = getLogoFlags(
@@ -233,7 +235,7 @@ export default function DashboardPage() {
                   Wartość portfela
                 </div>
                 <div className="mt-1.5 font-serif text-[clamp(2.25rem,7vw,4.5rem)] leading-none tracking-tight text-ink tabular-nums">
-                  {fmtMoney(summary.totalValuePln)}
+                  {fmtMoney(summary.totalValuePln + cfd.totalCfdPnlPln)}
                 </div>
                 <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[13px] text-ink2 tabular-nums">
                   <span>Koszt nabycia {fmtMoney(summary.totalCostPln)}</span>
@@ -248,6 +250,19 @@ export default function DashboardPage() {
                       }`}
                     >
                       niezrealizowane {fmtPct(unrealizedPct, 1)}
+                    </span>
+                  )}
+                  {cfd.positions.length > 0 && (
+                    <span
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-[13px] font-semibold ${
+                        cfd.totalCfdPnlPln > 0.000001
+                          ? "bg-pos/15 text-pos"
+                          : cfd.totalCfdPnlPln < -0.000001
+                            ? "bg-neg/15 text-neg"
+                            : "bg-surface2 text-ink2"
+                      }`}
+                    >
+                      w tym CFD {fmtSignedMoney(cfd.totalCfdPnlPln)}
                     </span>
                   )}
                 </div>
@@ -367,8 +382,17 @@ export default function DashboardPage() {
               amount={fmtSignedMoney(closedTotal)}
               tone={returnToneClass(closedTotal)}
               note={`w tym dyw. ${fmtMoney(summary.totalDividendsPln)}`}
-              isLast
+              isLast={cfd.positions.length === 0}
             />
+            {cfd.positions.length > 0 && (
+              <LedgerRow
+                label="Wynik CFD (mark-to-market)"
+                amount={fmtSignedMoney(cfd.totalCfdPnlPln)}
+                tone={returnToneClass(cfd.totalCfdPnlPln)}
+                note="poza FIFO/PIT-38 · ekspozycja niesumowana"
+                isLast
+              />
+            )}
           </div>
 
           {/* Dwie kolumny */}

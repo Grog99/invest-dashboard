@@ -145,6 +145,24 @@ CREATE TABLE IF NOT EXISTS note_templates (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS cfd_positions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT NOT NULL,
+  name TEXT NOT NULL,
+  direction TEXT NOT NULL,
+  volume REAL NOT NULL,
+  open_price REAL NOT NULL,
+  point_value REAL NOT NULL,
+  quote_symbol TEXT NOT NULL DEFAULT 'WIG20.WA',
+  opened_at TEXT NOT NULL,
+  override_price REAL,
+  override_pnl REAL,
+  quote_price REAL,
+  quote_updated_at TEXT,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
 `;
 
 // Szybki, czysto odczytowy test "czy w ogóle jest coś do zrobienia" — pozwala
