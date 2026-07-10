@@ -11,6 +11,7 @@ import {
   isValidTemperature,
   isValidTopP,
   isValidReasoningEffort,
+  isValidMaxResults,
 } from "@/lib/settings";
 import { reloadScheduler } from "@/lib/scheduler";
 
@@ -26,6 +27,7 @@ export async function GET() {
     temperature: getSetting(SETTING_KEYS.aiTemperature) ?? "",
     topP: getSetting(SETTING_KEYS.aiTopP) ?? "",
     reasoningEffort: getSetting(SETTING_KEYS.aiReasoningEffort) ?? "",
+    webSearchMaxResults: getSetting(SETTING_KEYS.aiWebSearchMaxResults) ?? "",
   });
 }
 
@@ -99,6 +101,15 @@ export async function POST(req: NextRequest) {
       );
     }
   }
+  if (typeof body.webSearchMaxResults === "string") {
+    const trimmed = body.webSearchMaxResults.trim();
+    if (trimmed && !isValidMaxResults(Number(trimmed))) {
+      return NextResponse.json(
+        { error: "Liczba wyników web searchu musi być jedną z: 3, 5, 10, 15, 20." },
+        { status: 400 }
+      );
+    }
+  }
   if (typeof body.temperature === "string") {
     setSetting(SETTING_KEYS.aiTemperature, body.temperature.trim());
   }
@@ -107,6 +118,12 @@ export async function POST(req: NextRequest) {
   }
   if (typeof body.reasoningEffort === "string") {
     setSetting(SETTING_KEYS.aiReasoningEffort, body.reasoningEffort.trim());
+  }
+  if (typeof body.webSearchMaxResults === "string") {
+    setSetting(
+      SETTING_KEYS.aiWebSearchMaxResults,
+      body.webSearchMaxResults.trim()
+    );
   }
 
   // "" czyści wybór ("Brak"); wartość musi być dodatnią liczbą całkowitą,
