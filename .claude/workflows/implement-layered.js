@@ -20,7 +20,7 @@ export const meta = {
 // Dlatego: jesli args jest stringiem, probujemy go sparsowac, i dopiero potem czytamy pola.
 let input = args
 if (typeof input === 'string') {
-  try { input = JSON.parse(input) } catch (e) { /* zostaw jako string — obsluzy walidacja nizej */ }
+  try { input = JSON.parse(input) } catch { /* zostaw jako string — obsluzy walidacja nizej */ }
 }
 const planPath = (input && typeof input === 'object') ? input.planPath : undefined
 if (!planPath) {

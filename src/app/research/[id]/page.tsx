@@ -28,6 +28,7 @@ export default async function NotePage({
     temperature,
     topP,
     reasoningEffort,
+    webSearchMaxResults,
   } = getAiConfig();
 
   return (
@@ -52,6 +53,7 @@ export default async function NotePage({
           defaultTemperature={temperature != null ? String(temperature) : ""}
           defaultTopP={topP != null ? String(topP) : ""}
           defaultReasoningEffort={reasoningEffort ?? ""}
+          defaultMaxResults={webSearchMaxResults != null ? String(webSearchMaxResults) : ""}
         />
       </Card>
     </div>

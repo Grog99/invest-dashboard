@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db, companies, notes } from "@/db";
-import { asc, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { fmtDateTime } from "@/lib/format";
 import { Card, PageHeader, Badge, EmptyState } from "@/components/ui";
 

@@ -20,7 +20,7 @@ export function TransactionEditButton({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [companyId, setCompanyId] = useState(String(transaction.companyId));
+  const [companyId] = useState(String(transaction.companyId));
   const [type, setType] = useState(transaction.type);
   const [date, setDate] = useState(transaction.date);
   const [quantity, setQuantity] = useState(String(transaction.quantity));

@@ -35,6 +35,7 @@ export function NoteEditor({
   defaultTemperature,
   defaultTopP,
   defaultReasoningEffort,
+  defaultMaxResults,
 }: {
   note?: Note;
   companies: Company[];
@@ -45,6 +46,7 @@ export function NoteEditor({
   defaultTemperature?: string;
   defaultTopP?: string;
   defaultReasoningEffort?: string;
+  defaultMaxResults?: string;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(note?.title ?? "");
@@ -369,6 +371,7 @@ export function NoteEditor({
         defaultTemperature={defaultTemperature}
         defaultTopP={defaultTopP}
         defaultReasoningEffort={defaultReasoningEffort}
+        defaultMaxResults={defaultMaxResults}
         onFillResult={handleFillResult}
         onGenerateResult={handleGenerateResult}
       />

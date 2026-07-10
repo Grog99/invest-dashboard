@@ -1,12 +1,17 @@
 import { db, settings } from "@/db";
 import { eq } from "drizzle-orm";
-import { REASONING_EFFORTS, type ReasoningEffort } from "./ai-types";
+import {
+  REASONING_EFFORTS,
+  type ReasoningEffort,
+  WEB_SEARCH_MAX_RESULTS,
+  type WebSearchMaxResults,
+} from "./ai-types";
 
 // Re-eksport dla dotychczasowych importów `from "@/lib/settings"` (route
 // handlery, src/lib/ai.ts) — definicja źródłowa w ./ai-types (patrz komentarz
 // tam), żeby kod kliencki mógł importować bez wciągania @/db do bundla.
-export { REASONING_EFFORTS };
-export type { ReasoningEffort };
+export { REASONING_EFFORTS, WEB_SEARCH_MAX_RESULTS };
+export type { ReasoningEffort, WebSearchMaxResults };
 
 export const SETTING_KEYS = {
   openrouterApiKey: "openrouter_api_key",
@@ -14,6 +19,7 @@ export const SETTING_KEYS = {
   aiTemperature: "ai_temperature",
   aiTopP: "ai_top_p",
   aiReasoningEffort: "ai_reasoning_effort",
+  aiWebSearchMaxResults: "ai_web_search_max_results",
   cronQuotes: "cron_quotes",
   cronNews: "cron_news",
   theme: "theme",
@@ -81,6 +87,15 @@ export function isValidReasoningEffort(
   return (REASONING_EFFORTS as readonly string[]).includes(value);
 }
 
+export function isValidMaxResults(
+  value: number
+): value is WebSearchMaxResults {
+  return (
+    Number.isInteger(value) &&
+    (WEB_SEARCH_MAX_RESULTS as readonly number[]).includes(value)
+  );
+}
+
 // Parsuje wartość ustawienia (string z k-v `settings`, ""/null = brak) na
 // number|null. Pusty, niepoprawny liczbowo lub poza zakresem string -> null
 // ("nie wysyłaj parametru, użyj domyślnej modelu" — patrz plan, sekcja
@@ -102,4 +117,12 @@ export function parseReasoningEffortSetting(
 ): ReasoningEffort | null {
   if (value == null || value.trim() === "") return null;
   return isValidReasoningEffort(value) ? value : null;
+}
+
+// Puste/null/niepoprawne -> null ("nie wysyłaj max_results, użyj domyślnej
+// providera" — patrz docs/plans/ai-analysis-max-results.md, Podejście pkt 4).
+export function parseMaxResultsSetting(value: string | null): number | null {
+  if (value == null || value.trim() === "") return null;
+  const n = Number(value);
+  return isValidMaxResults(n) ? n : null;
 }

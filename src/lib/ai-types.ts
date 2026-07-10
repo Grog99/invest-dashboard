@@ -9,3 +9,10 @@
 
 export const REASONING_EFFORTS = ["low", "medium", "high"] as const;
 export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
+
+// Dozwolone wartości `max_results` pluginu `web` (liczba stron przeszukiwanych
+// przez web search OpenRoutera) — Select z gotowymi opcjami (nie dowolna
+// liczba), patrz docs/plans/ai-analysis-max-results.md. Domyślna providera
+// (gdy parametr pominięty w body) to 5.
+export const WEB_SEARCH_MAX_RESULTS = [3, 5, 10, 15, 20] as const;
+export type WebSearchMaxResults = (typeof WEB_SEARCH_MAX_RESULTS)[number];

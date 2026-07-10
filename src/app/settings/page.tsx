@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const temperature = getSetting(SETTING_KEYS.aiTemperature) ?? "";
   const topP = getSetting(SETTING_KEYS.aiTopP) ?? "";
   const reasoningEffort = getSetting(SETTING_KEYS.aiReasoningEffort) ?? "";
+  const webSearchMaxResults = getSetting(SETTING_KEYS.aiWebSearchMaxResults) ?? "";
   const cronQuotes = getSetting(SETTING_KEYS.cronQuotes) ?? DEFAULT_CRON.quotes;
   const cronNews = getSetting(SETTING_KEYS.cronNews) ?? DEFAULT_CRON.news;
   const sources = seedDefaultSourcesIfEmpty();
@@ -54,6 +55,7 @@ export default function SettingsPage() {
             temperature={temperature}
             topP={topP}
             reasoningEffort={reasoningEffort}
+            webSearchMaxResults={webSearchMaxResults}
           />
         </Card>
 
