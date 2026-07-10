@@ -9,7 +9,7 @@
 import cron, { type ScheduledTask } from "node-cron";
 import { getSetting, SETTING_KEYS, DEFAULT_CRON } from "./settings";
 import { refreshQuotes } from "./quotes";
-import { refreshNews, seedDefaultSourcesIfEmpty } from "./news";
+import { refreshNews, seedDefaultSourcesIfEmpty, pruneNewsRetention } from "./news";
 
 type JobName = "quotes" | "news";
 
@@ -87,6 +87,12 @@ export function reloadScheduler(): void {
 export function startScheduler(): void {
   if (state.initialized) return;
   state.initialized = true;
+  // Jednorazowa konwergencja retencji newsów: przycina CAŁY istniejący
+  // backlog (wszystkie spółki + pula ogólna) do limitu z Ustawień, nie tylko
+  // spółki dotknięte kolejnym refreshem — patrz docs/plans/
+  // news-message-retention-limits.md, sekcja "Konwergencja istniejących
+  // baz". Tanie i idempotentne (drugi start bez zmian nic nie usuwa).
+  pruneNewsRetention();
   reloadScheduler();
   console.log("[scheduler] wystartował");
 }

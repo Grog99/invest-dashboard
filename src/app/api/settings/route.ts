@@ -8,9 +8,11 @@ import {
   SETTING_KEYS,
   DEFAULT_MODEL,
   DEFAULT_CRON,
+  DEFAULT_NEWS_RETENTION_LIMIT,
   isValidTemperature,
   isValidTopP,
   isValidReasoningEffort,
+  isValidRetentionLimit,
 } from "@/lib/settings";
 import { reloadScheduler } from "@/lib/scheduler";
 
@@ -26,6 +28,9 @@ export async function GET() {
     temperature: getSetting(SETTING_KEYS.aiTemperature) ?? "",
     topP: getSetting(SETTING_KEYS.aiTopP) ?? "",
     reasoningEffort: getSetting(SETTING_KEYS.aiReasoningEffort) ?? "",
+    newsRetentionLimit:
+      getSetting(SETTING_KEYS.newsRetentionLimit) ??
+      String(DEFAULT_NEWS_RETENTION_LIMIT),
   });
 }
 
@@ -107,6 +112,28 @@ export async function POST(req: NextRequest) {
   }
   if (typeof body.reasoningEffort === "string") {
     setSetting(SETTING_KEYS.aiReasoningEffort, body.reasoningEffort.trim());
+  }
+
+  // Limit retencji newsów: w przeciwieństwie do temperature/top_p/reasoning
+  // effort nie ma stanu "wyczyszczone" — musi być zawsze dodatnią liczbą
+  // całkowitą, inaczej 400 i nic nie zapisujemy (docs/plans/
+  // news-message-retention-limits.md, sekcja "Backend").
+  if (
+    typeof body.newsRetentionLimit === "string" ||
+    typeof body.newsRetentionLimit === "number"
+  ) {
+    const raw =
+      typeof body.newsRetentionLimit === "number"
+        ? body.newsRetentionLimit
+        : body.newsRetentionLimit.trim();
+    const n = Number(raw);
+    if (!isValidRetentionLimit(n)) {
+      return NextResponse.json(
+        { error: "Limit retencji newsów musi być dodatnią liczbą całkowitą." },
+        { status: 400 }
+      );
+    }
+    setSetting(SETTING_KEYS.newsRetentionLimit, String(n));
   }
 
   // "" czyści wybór ("Brak"); wartość musi być dodatnią liczbą całkowitą,

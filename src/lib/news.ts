@@ -13,6 +13,7 @@ import {
 } from "@/db";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { computeDedupKey, nowISO } from "./format";
+import { getNewsRetentionLimit } from "./settings";
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -199,6 +200,11 @@ export async function refreshNews(): Promise<NewsRefreshResult> {
   const matchers = buildMatchers(allCompanies);
 
   const result: NewsRefreshResult = { fetched: 0, inserted: 0, errors: [] };
+  // Spółki dotknięte w tym przebiegu (nowy insert LUB doklejone dopasowanie
+  // przy konflikcie/dedupie) — patrz plan, sekcja "Kiedy i jak wołać".
+  // Tylko one mogą przekroczyć limit retencji, więc tylko one wymagają
+  // przycięcia (optymalizacja, pula ogólna jest przycinana zawsze niżej).
+  const affectedCompanyIds = new Set<number>();
 
   for (const source of sources) {
     try {
@@ -255,6 +261,7 @@ export async function refreshNews(): Promise<NewsRefreshResult> {
             .values({ newsId, companyId })
             .onConflictDoNothing()
             .run();
+          affectedCompanyIds.add(companyId);
         }
       }
 
@@ -272,7 +279,79 @@ export async function refreshNews(): Promise<NewsRefreshResult> {
     }
   }
 
+  // Retencja inline — jedna instrukcja per refresh, nie per-item (plan,
+  // sekcja "Kiedy i jak wołać"). Cicha: żadnych logów/UI, tylko usunięcia.
+  pruneNewsRetention(affectedCompanyIds);
+
   return result;
+}
+
+// Przycina historię newsów do `limit` (getNewsRetentionLimit(), domyślnie
+// DEFAULT_NEWS_RETENTION_LIMIT) najnowszych wg tego samego porządku co
+// listNews(): coalesce(published_at,'') DESC, id DESC (idx_news_published_id).
+//
+// - `companyIds` podane (niepuste) -> przycina TYLKO te spółki (krok 1, tanie
+//   — wywołanie z refreshNews() dla spółek dotkniętych w danym przebiegu) +
+//   zawsze pulę "ogólną" (krok 2).
+// - `companyIds` pominięte/puste -> pełny przemiat: wszystkie spółki mające
+//   jakikolwiek wiersz w news_company + pula ogólna (backfill/konwergencja
+//   istniejących baz, wołane raz przy starcie procesu w startScheduler()).
+//
+// Krok 1 (per spółka) musi iść przed krokiem 2 (pula ogólna), żeby "sieroty"
+// (item, który stracił w kroku 1 swoje ostatnie powiązanie) trafiły do puli
+// ogólnej i podlegały jej limitowi — patrz plan, sekcja "Kluczowa decyzja".
+// Usunięcie news_items kaskadowo usuwa jego wiersze news_company
+// (ON DELETE CASCADE + foreign_keys = ON, src/db/index.ts).
+export function pruneNewsRetention(companyIds?: Iterable<number>): void {
+  const limit = getNewsRetentionLimit();
+  const ids = companyIds ? Array.from(new Set(companyIds)) : null;
+
+  db.transaction((tx) => {
+    const targetCompanyIds =
+      ids !== null
+        ? ids
+        : tx
+            .select({ companyId: newsCompany.companyId })
+            .from(newsCompany)
+            .groupBy(newsCompany.companyId)
+            .all()
+            .map((r) => r.companyId);
+
+    // Krok 1 — przytnij powiązania news_company per spółka do top-`limit`.
+    for (const companyId of targetCompanyIds) {
+      tx.run(sql`
+        DELETE FROM ${newsCompany}
+        WHERE ${newsCompany.companyId} = ${companyId}
+          AND ${newsCompany.newsId} NOT IN (
+            SELECT nc.news_id
+            FROM ${newsCompany} nc
+            JOIN ${newsItems} ni ON ni.id = nc.news_id
+            WHERE nc.company_id = ${companyId}
+            ORDER BY coalesce(ni.published_at, '') DESC, ni.id DESC
+            LIMIT ${limit}
+          )
+      `);
+    }
+
+    // Krok 2 — przytnij pulę "ogólną" (0 wierszy news_company), zawsze,
+    // niezależnie od tego czy krok 1 coś przyciął (tania, absorbuje sieroty
+    // i ewentualne nowe newsy bez dopasowania spółki).
+    tx.run(sql`
+      DELETE FROM ${newsItems}
+      WHERE NOT EXISTS (
+        SELECT 1 FROM ${newsCompany} nc WHERE nc.news_id = ${newsItems.id}
+      )
+      AND ${newsItems.id} NOT IN (
+        SELECT ni.id
+        FROM ${newsItems} ni
+        WHERE NOT EXISTS (
+          SELECT 1 FROM ${newsCompany} nc2 WHERE nc2.news_id = ni.id
+        )
+        ORDER BY coalesce(ni.published_at, '') DESC, ni.id DESC
+        LIMIT ${limit}
+      )
+    `);
+  });
 }
 
 export interface NewsListItem {
