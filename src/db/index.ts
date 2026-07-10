@@ -159,6 +159,7 @@ CREATE TABLE IF NOT EXISTS cfd_positions (
   opened_at TEXT NOT NULL,
   override_price REAL,
   override_pnl REAL,
+  swap_pln REAL,
   quote_price REAL,
   quote_updated_at TEXT,
   note TEXT,
@@ -367,6 +368,37 @@ function migrateCompanyColor(sqlite: Database.Database): void {
   migrate();
 }
 
+// Tani read-only guard (kalka needsCompanyDomainMigration powyżej) — samo
+// PRAGMA table_info nie zapisuje nic, więc N równoległych workerów `next
+// build` może je odpytać bez rywalizacji o blokadę zapisu WAL.
+function needsCfdSwapMigration(sqlite: Database.Database): boolean {
+  const cols = sqlite.prepare(`PRAGMA table_info(cfd_positions)`).all() as {
+    name: string;
+  }[];
+  return !cols.some((c) => c.name === "swap_pln");
+}
+
+// Jednorazowa (idempotentna) migracja: dokłada nullowalną kolumnę `swap_pln`
+// do istniejących baz (świeże bazy dostają ją już z BOOTSTRAP_SQL). Kalka 1:1
+// migrateCompanyDomain() — jedyna różnica to nazwa tabeli/kolumny; brak
+// DEFAULT/backfillu, bo kolumna jest nullowalna (patrz
+// docs/plans/manualny-swap-cfd.md, sekcja „Podejście" pkt 1).
+function migrateCfdSwap(sqlite: Database.Database): void {
+  if (!needsCfdSwapMigration(sqlite)) return;
+  const migrate = sqlite.transaction(() => {
+    // Re-sprawdzamy kolumnę WEWNĄTRZ transakcji zapisu — patrz komentarz przy
+    // migrateCompanyType() powyżej (ten sam wyścig równoległych workerów `next
+    // build` między read-only guardem a startem tej transakcji).
+    const cols = sqlite.prepare(`PRAGMA table_info(cfd_positions)`).all() as {
+      name: string;
+    }[];
+    if (!cols.some((c) => c.name === "swap_pln")) {
+      sqlite.exec(`ALTER TABLE cfd_positions ADD COLUMN swap_pln REAL`);
+    }
+  });
+  migrate();
+}
+
 function createDb(): BetterSQLite3Database<typeof schema> {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const sqlite = new Database(DB_PATH);
@@ -384,6 +416,7 @@ function createDb(): BetterSQLite3Database<typeof schema> {
   migrateCompanyType(sqlite);
   migrateCompanyDomain(sqlite);
   migrateCompanyColor(sqlite);
+  migrateCfdSwap(sqlite);
   return drizzle(sqlite, { schema });
 }
 

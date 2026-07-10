@@ -41,6 +41,12 @@ export async function POST(req: NextRequest) {
     body.overridePnl === ""
       ? null
       : Number(body.overridePnl);
+  // Ręczny, skumulowany swap w PLN — może być ujemny, patrz walidacja niżej
+  // (Number.isFinite, NIE "> 0"; docs/plans/manualny-swap-cfd.md).
+  const swapPln =
+    body.swapPln === undefined || body.swapPln === null || body.swapPln === ""
+      ? null
+      : Number(body.swapPln);
   const note = String(body.note ?? "").trim() || null;
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(openedAt)) {
@@ -67,6 +73,12 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+  if (swapPln !== null && !Number.isFinite(swapPln)) {
+    return NextResponse.json(
+      { error: "Nieprawidłowa wartość swapu." },
+      { status: 400 }
+    );
+  }
 
   const created = db
     .insert(cfdPositions)
@@ -81,6 +93,7 @@ export async function POST(req: NextRequest) {
       openedAt,
       overridePrice,
       overridePnl,
+      swapPln,
       quotePrice: null,
       quoteUpdatedAt: null,
       note,

@@ -52,6 +52,11 @@ export function CfdModalButton({
       ? String(position.overridePnl)
       : ""
   );
+  const [swapPln, setSwapPln] = useState(
+    position?.swapPln !== null && position?.swapPln !== undefined
+      ? String(position.swapPln)
+      : ""
+  );
   const [note, setNote] = useState(position?.note ?? "");
 
   const save = async () => {
@@ -72,6 +77,7 @@ export function CfdModalButton({
             : Number(overridePrice.replace(",", ".")),
         overridePnl:
           overridePnl.trim() === "" ? null : Number(overridePnl.replace(",", ".")),
+        swapPln: swapPln.trim() === "" ? null : Number(swapPln.replace(",", ".")),
         note,
       };
       const res = await fetch(position ? `/api/cfd/${position.id}` : "/api/cfd", {
@@ -87,6 +93,7 @@ export function CfdModalButton({
         setOpenPrice("");
         setOverridePrice("");
         setOverridePnl("");
+        setSwapPln("");
         setNote("");
       }
       router.refresh();
@@ -225,14 +232,26 @@ export function CfdModalButton({
               kursu wg XTB (jeśli podany) albo z szacunku Yahoo.
             </p>
           </div>
-          <div>
-            <Label htmlFor="cf-note">Notatka (opcjonalnie)</Label>
-            <Input
-              id="cf-note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="np. broker, powód"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="cf-swap">Swap</Label>
+              <Input
+                id="cf-swap"
+                inputMode="decimal"
+                value={swapPln}
+                onChange={(e) => setSwapPln(e.target.value)}
+                placeholder="skumulowany swap z brokera, może być ujemny"
+              />
+            </div>
+            <div>
+              <Label htmlFor="cf-note">Notatka (opcjonalnie)</Label>
+              <Input
+                id="cf-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="np. broker, powód"
+              />
+            </div>
           </div>
           {error && <p className="text-[12px] text-neg">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">

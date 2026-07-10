@@ -210,6 +210,8 @@ export const companyLogos = sqliteTable("company_logos", {
 // Cena bieżąca dociągana z Yahoo po własnym quoteSymbol (domyślnie
 // "WIG20.WA") — bez FK do companies, bez zapisu do quotes_daily/quotes_latest
 // (patrz src/lib/cfd.ts, src/lib/quotes.ts, docs/plans/pozycja-cfd.md).
+// P&L liczony z ceny dolicza ręczny, skumulowany swap (swap_pln) — patrz
+// docs/plans/manualny-swap-cfd.md; gałąź override_pnl ("wg XTB") go pomija.
 export const cfdPositions = sqliteTable("cfd_positions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   symbol: text("symbol").notNull(), // krótka etykieta, np. "WIG20"
@@ -224,6 +226,10 @@ export const cfdPositions = sqliteTable("cfd_positions", {
   // wygrywają nad quote_price (patrz computeCfdPositions w src/lib/cfd.ts).
   overridePrice: real("override_price"),
   overridePnl: real("override_pnl"),
+  // Ręczna, skumulowana kwota swapu w PLN (dodatnia lub ujemna), wpisywana
+  // przez użytkownika z brokera — bez automatycznego naliczania dziennego
+  // (patrz docs/plans/manualny-swap-cfd.md). Nullable, bez DEFAULT.
+  swapPln: real("swap_pln"),
   quotePrice: real("quote_price"),
   quoteUpdatedAt: text("quote_updated_at"),
   note: text("note"),

@@ -109,6 +109,20 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       updates.overridePnl = overridePnl;
     }
   }
+  if (body.swapPln !== undefined) {
+    if (body.swapPln === null || body.swapPln === "") {
+      updates.swapPln = null;
+    } else {
+      const swapPln = Number(body.swapPln);
+      if (!Number.isFinite(swapPln)) {
+        return NextResponse.json(
+          { error: "Nieprawidłowa wartość swapu." },
+          { status: 400 }
+        );
+      }
+      updates.swapPln = swapPln;
+    }
+  }
   if (body.note !== undefined) {
     updates.note = String(body.note).trim() || null;
   }
