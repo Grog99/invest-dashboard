@@ -1,19 +1,19 @@
 ---
 name: implement-feature
-description: Implementuje gotowy plan (docs/plans/<slug>.md) warstwowo — dane -> API -> UI — przez deterministyczny workflow z handoffem schematu miedzy warstwami, potem weryfikacja end-to-end w preview. Uzyj gdy plan jest zaakceptowany, a chcesz implementacje z rozdzieleniem warstw zamiast jednego implementera. Argument: slug albo sciezka do planu.
+description: Implementuje gotowy plan (docs/plans/<slug>.md) warstwowo — dane -> backend -> frontend — przez deterministyczny workflow z handoffem schematu miedzy warstwami, potem weryfikacja end-to-end w preview. Uzyj gdy plan jest zaakceptowany, a chcesz implementacje z rozdzieleniem warstw zamiast jednego implementera. Argument: slug albo sciezka do planu.
 argument-hint: <slug|docs/plans/xxx.md>
 disable-model-invocation: true
 ---
 
 # implement-feature
 
-Orkiestruje implementacje **zaakceptowanego** planu warstwami: **dane -> API -> UI**, z deterministyczna kolejnoscia i strukturyzowanym przekazaniem kontekstu miedzy warstwami (schema handoff), a na koncu weryfikuje feature realnie w przegladarce. `$ARGUMENTS` to slug (np. `pozycja-cfd`) albo sciezka do pliku planu.
+Orkiestruje implementacje **zaakceptowanego** planu warstwami: **dane -> backend -> frontend**, z deterministyczna kolejnoscia i strukturyzowanym przekazaniem kontekstu miedzy warstwami (schema handoff), a na koncu weryfikuje feature realnie w przegladarce. `$ARGUMENTS` to slug (np. `pozycja-cfd`) albo sciezka do pliku planu.
 
 Ten skill NIE planuje i NIE pyta o zakres — od tego jest `/plan-feature`. Zaklada gotowy plan i (zwykle) istniejacy branch `feature/<slug>`.
 
 ## Dlaczego workflow, nie zagniezdzeni subagenci
 
-Wywolanie tego skilla jest **jawnym opt-inem do narzedzia `Workflow`** — nie potrzeba Ultracode ani slowa-klucza w prompcie. Workflow daje to, czego luzna orkiestracja agent-w-agencie nie gwarantuje: deterministyczna kolejnosc warstw, walidowany JSON-handoff (API dostaje dokladne nazwy tabel/funkcji z warstwy danych, UI — dokladny ksztalt endpointow), widocznosc postepu (`/workflows`) i resume z cache'em po edycji skryptu.
+Wywolanie tego skilla jest **jawnym opt-inem do narzedzia `Workflow`** — nie potrzeba Ultracode ani slowa-klucza w prompcie. Workflow daje to, czego luzna orkiestracja agent-w-agencie nie gwarantuje: deterministyczna kolejnosc warstw, walidowany JSON-handoff (backend dostaje dokladne nazwy tabel/funkcji z warstwy danych, frontend — dokladny ksztalt endpointow), widocznosc postepu (`/workflows`) i resume z cache'em po edycji skryptu.
 
 ## Krok 1 — Ustal plan i branch
 
@@ -26,10 +26,10 @@ Wywolanie tego skilla jest **jawnym opt-inem do narzedzia `Workflow`** — nie p
 Z sekcji `## Pliki do zmiany` ustal, ktore warstwy sa niepuste. Zmapuj podsekcje planu na warstwy workflowa:
 
 - **`dane`** — podsekcje „Baza (warstwa danych)" i „Logika" (schema, bootstrap DB, czyste funkcje w `src/lib/`, potok cen).
-- **`api`** — podsekcja „API (warstwa API)" (route handlery w `src/app/api/**`).
-- **`ui`** — podsekcja „UI (warstwa UI)" (komponenty, strony).
+- **`backend`** — podsekcja „Backend (warstwa backend)" (route handlery w `src/app/api/**` oraz kod serwerowy poza HTTP: zadania w tle/harmonogramy — node-cron, `src/instrumentation.ts`, `src/lib/scheduler.ts` — middleware, integracje zewnetrzne).
+- **`frontend`** — podsekcja „Frontend (warstwa frontend)" (komponenty, strony).
 
-Zbuduj `layers` jako uporzadkowana liste tylko tych warstw, ktore maja realne pliki (pomin te oznaczone „— brak —"). Pure-UI feature => `layers: ['ui']`. Feature bez UI => `['dane','api']` itd.
+Zbuduj `layers` jako uporzadkowana liste tylko tych warstw, ktore maja realne pliki (pomin te oznaczone „— brak —"). Pure-frontend feature => `layers: ['frontend']`. Feature bez frontendu => `['dane','backend']` itd.
 
 ## Krok 3 — Uruchom workflow
 
@@ -38,7 +38,7 @@ Wywolaj narzedzie **`Workflow`**:
 - `name: 'implement-layered'` (skrypt w `.claude/workflows/implement-layered.js`). Gdyby nazwa sie nie rozwiazala, uzyj `scriptPath: '.claude/workflows/implement-layered.js'`.
 - `args: { planPath: '<planPath>', layers: [<wykryte warstwy>] }`. Przekaz `args` jako zwykly obiekt — nie stringuj recznie. Harness potrafi zserializowac `args` do JSON-stringa, ale skrypt sam normalizuje (parsuje string), wiec obejscie z literalna sciezka planu nie jest potrzebne.
 
-Workflow implementuje warstwy po kolei (dane -> API -> UI), przekazujac miedzy nimi strukturyzowany opis (tabele/typy/funkcje -> endpointy -> UI), i konczy ograniczona petla `npm run lint` + `npm run build` z delegowana naprawa. Poczekaj na zakonczenie (dostaniesz `<task-notification>`), potem odczytaj zwrocony obiekt `{ data, api, ui, verify }`.
+Workflow implementuje warstwy po kolei (dane -> backend -> frontend), przekazujac miedzy nimi strukturyzowany opis (tabele/typy/funkcje -> endpointy/zadania backendu -> frontend), i konczy ograniczona petla `npm run lint` + `npm run build` z delegowana naprawa. Poczekaj na zakonczenie (dostaniesz `<task-notification>`), potem odczytaj zwrocony obiekt `{ data, backend, frontend, verify }`.
 
 ## Krok 4 — Weryfikacja end-to-end (preview)
 
@@ -52,11 +52,11 @@ Workflow potwierdza tylko lint/build. **Ty** domykasz weryfikacje w przegladarce
 
 ## Krok 5 — Podsumowanie i przekazanie
 
-Zrefeuj zwiezle: co powstalo w kazdej warstwie (z `data/api/ui`), wynik weryfikacji (lint/build/preview, ze screenshotem) i wszelkie odstepstwa od planu. **Nie commituj z automatu** — zaproponuj `/code-review` i zapytaj wprost o zgode na commit + PR (jak BRAMKA 2 w `/plan-feature`). Commit/push tylko na wyrazne polecenie.
+Zrefeuj zwiezle: co powstalo w kazdej warstwie (z `data/backend/frontend`), wynik weryfikacji (lint/build/preview, ze screenshotem) i wszelkie odstepstwa od planu. **Nie commituj z automatu** — zaproponuj `/code-review` i zapytaj wprost o zgode na commit + PR (jak BRAMKA 2 w `/plan-feature`). Commit/push tylko na wyrazne polecenie.
 
 ## Zasady
 
 - Warstwy ida **sekwencyjnie** (nie rownolegle) — pracuja na tym samym drzewie po kolei, wiec bez izolacji worktree.
-- Implementacja bywa iteracyjna (API czasem wymusza korekte w danych). Jesli handoff pokaze niespojnosc, ktorej petla lint/build nie zlapie — nie „idz dalej na sile": zdiagnozuj i deleguj poprawke do wlasciwej warstwy.
+- Implementacja bywa iteracyjna (backend czasem wymusza korekte w danych). Jesli handoff pokaze niespojnosc, ktorej petla lint/build nie zlapie — nie „idz dalej na sile": zdiagnozuj i deleguj poprawke do wlasciwej warstwy.
 - Subagentom w workflow kontekst idzie przez `args` i schema-handoff — nie zakladaj, ze maja Twoja historie rozmowy.
 - Modele/effort ustawia skrypt workflowa (implementery: Sonnet). Nie potrzeba Ultracode.

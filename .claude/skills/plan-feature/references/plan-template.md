@@ -30,18 +30,19 @@ Pamiętaj o regule z `AGENTS.md`: przed założeniem API Next.js sprawdź `node_
 
 Konkretne ścieżki i co się w nich dzieje. **Wskaż istniejące utility/komponenty do reużycia** (ze ścieżkami), zamiast pisać od zera.
 
-Grupuj pliki w **trzy warstwy** poniżej — ta struktura napędza orkiestrator `/implement-feature` (implementacja idzie dane → API → UI, z przekazaniem kontekstu między warstwami). Warstwa, której feature nie dotyka, dostaje wpis `— brak —` (np. pure-UI feature bez zmian w danych/API).
+Grupuj pliki w **trzy warstwy** poniżej — ta struktura napędza orkiestrator `/implement-feature` (implementacja idzie dane → backend → frontend, z przekazaniem kontekstu między warstwami). Warstwa, której feature nie dotyka, dostaje wpis `— brak —` (np. pure-frontend feature bez zmian w danych/backendzie).
 
 **Baza (warstwa danych):** schema, migracje/bootstrap DB, czyste funkcje domenowe w `src/lib/`, potoki danych (np. odświeżanie cen).
 
 - `src/db/schema.ts` — co i po co
 - `src/lib/xxx.ts` — czysta funkcja licząca (reużyj: `src/lib/format.ts` `foo`)
 
-**API (warstwa API):** route handlery w `src/app/api/**`.
+**Backend (warstwa backend):** route handlery w `src/app/api/**` oraz kod serwerowy poza HTTP — zadania w tle/harmonogramy (`src/lib/scheduler.ts`, `src/instrumentation.ts`, node-cron), middleware, integracje zewnętrzne.
 
 - `src/app/api/xxx/route.ts` — GET/POST + walidacja (wzorzec: `src/app/api/transactions/route.ts`)
+- `src/lib/scheduler.ts` — nowe/zmienione zadanie w tle (wzorzec: `reloadScheduler()`)
 
-**UI (warstwa UI):** komponenty i strony (pamiętaj o widoku kartowym mobile ~360–390px z `AGENTS.md`).
+**Frontend (warstwa frontend):** komponenty i strony (pamiętaj o widoku kartowym mobile ~360–390px z `AGENTS.md`).
 
 - `src/components/XxxForm.tsx` — reużyj `Modal`/`Button`/`Input` z `src/components/ui.tsx`
 - `src/app/xxx/page.tsx` — tabela desktop + karty mobile
