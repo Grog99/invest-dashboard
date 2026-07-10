@@ -110,6 +110,14 @@ export default function DashboardPage() {
       ? (summary.totalUnrealizedPln / summary.totalCostPln) * 100
       : null;
   const closedTotal = summary.totalRealizedPln + summary.totalDividendsPln;
+  const totalPnlPln =
+    summary.totalUnrealizedPln +
+    summary.totalRealizedPln +
+    summary.totalDividendsPln +
+    cfd.totalCfdPnlPln;
+  const totalPnlPct =
+    summary.totalCostPln > 0 ? (totalPnlPln / summary.totalCostPln) * 100 : null;
+  const totalPnlTone = returnToneClass(totalPnlPln);
   const dayTone = returnToneClass(summary.totalDayChangePln);
   const dayArrow = summary.totalDayChangePln > 0 ? "▲" : summary.totalDayChangePln < 0 ? "▼" : "•";
 
@@ -285,6 +293,32 @@ export default function DashboardPage() {
                   <div className={`mt-0.5 text-[13px] tabular-nums ${dayTone}`}>
                     {dayArrow} {fmtPct(dayPct)}
                   </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5 border-t border-border pt-4">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-ink2">
+                Łączny wynik
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <span
+                  className={`text-[28px] font-bold tracking-tight tabular-nums sm:text-[30px] ${totalPnlTone}`}
+                >
+                  {fmtSignedMoney(totalPnlPln)}
+                </span>
+                {totalPnlPct !== null && (
+                  <span
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-[13px] font-semibold ${
+                      totalPnlPct > 0
+                        ? "bg-pos/15 text-pos"
+                        : totalPnlPct < 0
+                          ? "bg-neg/15 text-neg"
+                          : "bg-surface2 text-ink2"
+                    }`}
+                  >
+                    {fmtPct(totalPnlPct, 1)}
+                  </span>
                 )}
               </div>
             </div>
