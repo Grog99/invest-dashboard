@@ -8,9 +8,55 @@
 import { useState } from "react";
 import { Modal } from "./Modal";
 import { Button, Input, Label, Select, Textarea } from "./ui";
+import { REASONING_EFFORTS } from "@/lib/ai-types";
 import type { Company } from "@/db/schema";
 
 type Mode = "fill" | "generate";
+
+type Usage = {
+  cost?: number;
+  totalTokens?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  reasoningTokens?: number;
+  costDetails?: Record<string, unknown>;
+};
+
+const REASONING_EFFORT_LABELS: Record<(typeof REASONING_EFFORTS)[number], string> = {
+  low: "Niska (szybciej)",
+  medium: "Średnia",
+  high: "Wysoka (dogłębnie)",
+};
+
+// Format: "Koszt: $0.0042 · 3 210 tokenów" — pomija pola nieobecne w usage
+// (patrz plan, sekcja "Prezentacja kosztu"). Zwraca null, gdy nie ma nic do
+// pokazania (usage puste albo brak i cost, i totalTokens).
+function formatUsageLine(usage: Usage): string | null {
+  const parts: string[] = [];
+  if (usage.cost != null) {
+    parts.push(`Koszt: $${usage.cost.toFixed(4)}`);
+  }
+  if (usage.totalTokens != null) {
+    parts.push(`${usage.totalTokens.toLocaleString("pl-PL")} tokenów`);
+  }
+  if (parts.length === 0) return null;
+  return parts.join(" · ");
+}
+
+// Tooltip (natywny title, hover na desktopie) z rozbiciem tokenów/kosztu.
+function formatUsageTooltip(usage: Usage): string {
+  const lines: string[] = [];
+  if (usage.promptTokens != null) lines.push(`Prompt: ${usage.promptTokens} tokenów`);
+  if (usage.completionTokens != null) lines.push(`Completion: ${usage.completionTokens} tokenów`);
+  if (usage.reasoningTokens != null) lines.push(`Reasoning: ${usage.reasoningTokens} tokenów`);
+  if (usage.costDetails && Object.keys(usage.costDetails).length > 0) {
+    for (const [key, value] of Object.entries(usage.costDetails)) {
+      if (value == null) continue;
+      lines.push(`${key}: ${value}`);
+    }
+  }
+  return lines.join("\n");
+}
 
 export function AiAnalyzeModal({
   open,
@@ -20,6 +66,9 @@ export function AiAnalyzeModal({
   companyId,
   onCompanyIdChange,
   defaultModel,
+  defaultTemperature,
+  defaultTopP,
+  defaultReasoningEffort,
   onFillResult,
   onGenerateResult,
 }: {
@@ -32,6 +81,10 @@ export function AiAnalyzeModal({
   companyId: string;
   onCompanyIdChange: (id: string) => void;
   defaultModel: string;
+  /** Wartości globalne z Ustawień (stringi, "" = brak) — do placeholderów. */
+  defaultTemperature?: string;
+  defaultTopP?: string;
+  defaultReasoningEffort?: string;
   /** Tryb "fill": nadpisz całą treść notatki wynikiem. */
   onFillResult: (text: string) => void;
   /** Tryb "generate": doklej wynik po nagłówku "---". */
@@ -41,8 +94,12 @@ export function AiAnalyzeModal({
   const [webSearch, setWebSearch] = useState(false);
   const [instructions, setInstructions] = useState("");
   const [model, setModel] = useState("");
+  const [temperature, setTemperature] = useState("");
+  const [topP, setTopP] = useState("");
+  const [reasoningEffort, setReasoningEffort] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usage, setUsage] = useState<Usage | null>(null);
 
   const draftEmpty = !content.trim();
   const missingCompany = mode === "generate" && !companyId;
@@ -58,13 +115,24 @@ export function AiAnalyzeModal({
   const close = () => {
     if (busy) return;
     setError(null);
+    setUsage(null);
     onClose();
+  };
+
+  // Zmiana trybu po zakończonej analizie chowa stary koszt/błąd — nie ma
+  // sensu w kontekście nowego trybu (patrz plan, Ryzyka: "stan usage/error
+  // musi się czyścić przy zmianie trybu").
+  const changeMode = (next: Mode) => {
+    setMode(next);
+    setUsage(null);
+    setError(null);
   };
 
   const run = async () => {
     if (disabledReason) return;
     setBusy(true);
     setError(null);
+    setUsage(null);
     try {
       const res = await fetch("/api/ai/analyze", {
         method: "POST",
@@ -76,6 +144,9 @@ export function AiAnalyzeModal({
           webSearch,
           model: model.trim() || undefined,
           instructions: instructions.trim() || undefined,
+          temperature: temperature.trim() ? Number(temperature) : undefined,
+          topP: topP.trim() ? Number(topP) : undefined,
+          reasoningEffort: reasoningEffort || undefined,
         }),
       });
       const data = await res.json();
@@ -85,7 +156,10 @@ export function AiAnalyzeModal({
       } else {
         onGenerateResult(data.content as string);
       }
-      onClose();
+      // Wynik już zaaplikowany do notatki — modal zostaje otwarty, żeby
+      // pokazać koszt/tokeny; zamyka go teraz przycisk "Zamknij" (patrz
+      // plan, Podejście pkt 5 — zmiana UX, modal nie zamyka się sam).
+      setUsage((data.usage as Usage) ?? {});
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -101,14 +175,14 @@ export function AiAnalyzeModal({
           <div className="flex gap-1 rounded-lg border border-border bg-surface2 p-0.5">
             <button
               type="button"
-              onClick={() => setMode("fill")}
+              onClick={() => changeMode("fill")}
               className={`flex-1 cursor-pointer rounded-md px-2.5 py-1.5 text-[12px] font-medium ${mode === "fill" ? "bg-surface text-ink" : "text-muted"}`}
             >
               Uzupełnij szkic
             </button>
             <button
               type="button"
-              onClick={() => setMode("generate")}
+              onClick={() => changeMode("generate")}
               className={`flex-1 cursor-pointer rounded-md px-2.5 py-1.5 text-[12px] font-medium ${mode === "generate" ? "bg-surface text-ink" : "text-muted"}`}
             >
               Wygeneruj od zera
@@ -177,21 +251,85 @@ export function AiAnalyzeModal({
           />
         </div>
 
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="ai-modal-temperature">Temperature (opcjonalnie)</Label>
+            <Input
+              id="ai-modal-temperature"
+              type="number"
+              min={0}
+              max={2}
+              step={0.1}
+              value={temperature}
+              onChange={(e) => setTemperature(e.target.value)}
+              placeholder={defaultTemperature || "domyślna modelu"}
+            />
+          </div>
+          <div>
+            <Label htmlFor="ai-modal-top-p">Top P (opcjonalnie)</Label>
+            <Input
+              id="ai-modal-top-p"
+              type="number"
+              min={0}
+              max={1}
+              step={0.05}
+              value={topP}
+              onChange={(e) => setTopP(e.target.value)}
+              placeholder={defaultTopP || "domyślna modelu"}
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="ai-modal-reasoning-effort">Reasoning effort (opcjonalnie)</Label>
+          <Select
+            id="ai-modal-reasoning-effort"
+            value={reasoningEffort}
+            onChange={(e) => setReasoningEffort(e.target.value)}
+          >
+            <option value="">
+              Domyślne (globalne{defaultReasoningEffort ? `: ${defaultReasoningEffort}` : ""})
+            </option>
+            {REASONING_EFFORTS.map((effort) => (
+              <option key={effort} value={effort}>
+                {REASONING_EFFORT_LABELS[effort]}
+              </option>
+            ))}
+          </Select>
+        </div>
+
         {error && <p className="text-[12px] text-neg">{error}</p>}
 
-        <div className="flex flex-col-reverse justify-end gap-2 pt-1 sm:flex-row">
-          <Button variant="ghost" onClick={close} disabled={busy} className="w-full sm:w-auto">
-            Anuluj
-          </Button>
-          <Button
-            variant="primary"
-            onClick={run}
-            disabled={busy || !!disabledReason}
-            title={disabledReason ?? undefined}
-            className="w-full sm:w-auto"
+        {usage && (
+          <div
+            className="rounded-lg border border-border bg-surface2 p-2 text-[12px] text-ink2"
+            title={formatUsageTooltip(usage) || undefined}
           >
-            {busy ? "Generuję…" : "Uruchom"}
-          </Button>
+            {formatUsageLine(usage) ?? "Analiza gotowa."}
+          </div>
+        )}
+
+        <div className="flex flex-col-reverse justify-end gap-2 pt-1 sm:flex-row">
+          {usage ? (
+            <Button variant="primary" onClick={close} className="w-full sm:w-auto">
+              Zamknij
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={close} disabled={busy} className="w-full sm:w-auto">
+                Anuluj
+              </Button>
+              <Button
+                variant="primary"
+                onClick={run}
+                disabled={busy || !!disabledReason}
+                title={disabledReason ?? undefined}
+                className="w-full sm:w-auto"
+              >
+                {busy ? "Generuję…" : "Uruchom"}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </Modal>

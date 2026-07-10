@@ -7,6 +7,11 @@ import {
   FILL_DRAFT_INSTRUCTION,
   webSearchSystemHint,
 } from "@/lib/ai";
+import {
+  isValidTemperature,
+  isValidTopP,
+  isValidReasoningEffort,
+} from "@/lib/settings";
 
 export const maxDuration = 300;
 
@@ -26,6 +31,40 @@ export async function POST(req: NextRequest) {
   const instructions =
     typeof body.instructions === "string" ? body.instructions.trim() : "";
   const draft = typeof body.draft === "string" ? body.draft : "";
+
+  // Override generowania per uruchomienie: puste/nieobecne -> undefined ->
+  // openrouterChat sam sięgnie po domyślną z Ustawień (getAiConfig). Zakresy
+  // walidowane tu (400 z czytelnym komunikatem), spójnie z /api/settings.
+  const temperature =
+    typeof body.temperature === "number" && Number.isFinite(body.temperature)
+      ? body.temperature
+      : undefined;
+  if (temperature !== undefined && !isValidTemperature(temperature)) {
+    return NextResponse.json(
+      { error: "Temperature musi być w zakresie 0–2." },
+      { status: 400 }
+    );
+  }
+  const topP =
+    typeof body.topP === "number" && Number.isFinite(body.topP)
+      ? body.topP
+      : undefined;
+  if (topP !== undefined && !isValidTopP(topP)) {
+    return NextResponse.json(
+      { error: "Top P musi być w zakresie 0–1." },
+      { status: 400 }
+    );
+  }
+  const reasoningEffort =
+    typeof body.reasoningEffort === "string" && body.reasoningEffort
+      ? body.reasoningEffort
+      : undefined;
+  if (reasoningEffort !== undefined && !isValidReasoningEffort(reasoningEffort)) {
+    return NextResponse.json(
+      { error: "Reasoning effort musi być jednym z: low, medium, high." },
+      { status: 400 }
+    );
+  }
 
   if (mode === "generate" && !companyId) {
     return NextResponse.json(
@@ -62,7 +101,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: system },
         { role: "user", content: user },
       ],
-      { stream: false, model, webSearch }
+      { stream: false, model, webSearch, temperature, topP, reasoning: reasoningEffort }
     );
     const data = await upstream.json();
     const content = data?.choices?.[0]?.message?.content;
@@ -72,7 +111,18 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       );
     }
-    return NextResponse.json({ content });
+    // Usage accounting OpenRoutera — zawsze automatycznie dołączane do
+    // odpowiedzi non-streaming (patrz plan, Podejście pkt 3). Wszystkie pola
+    // opcjonalne (mogą być undefined/0/null w zależności od providera).
+    const usage = {
+      cost: data?.usage?.cost,
+      totalTokens: data?.usage?.total_tokens,
+      promptTokens: data?.usage?.prompt_tokens,
+      completionTokens: data?.usage?.completion_tokens,
+      reasoningTokens: data?.usage?.completion_tokens_details?.reasoning_tokens,
+      costDetails: data?.usage?.cost_details,
+    };
+    return NextResponse.json({ content, usage });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : String(e) },
