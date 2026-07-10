@@ -242,6 +242,7 @@ export default function PortfolioPage() {
                     <Th right>Wart. punktu</Th>
                     <Th right>Ekspozycja</Th>
                     <Th right>Wynik P&L</Th>
+                    <Th right>Swap</Th>
                     <Th />
                   </>
                 }
@@ -285,6 +286,9 @@ export default function PortfolioPage() {
                     </Td>
                     <Td right>
                       <Delta value={p.pnl} />
+                    </Td>
+                    <Td right>
+                      <Delta value={p.position.swapPln} />
                     </Td>
                     <Td right>
                       <span className="inline-flex items-center gap-1">
@@ -339,6 +343,9 @@ export default function PortfolioPage() {
                     <Field label="Ekspozycja">
                       {p.exposure !== null ? fmtMoney(p.exposure) : "—"}
                     </Field>
+                    <Field label="Swap">
+                      <Delta value={p.position.swapPln} />
+                    </Field>
                   </div>
                   <div className="mt-2 flex justify-end gap-1">
                     <CfdModalButton position={p.position} iconOnly />
@@ -358,6 +365,7 @@ export default function PortfolioPage() {
               się tylko wynik P&L (mark-to-market). Szacunek Yahoo liczy się z
               indeksu kasowego WIG20, a XTB wycenia CFD z kontraktu futures FW20 —
               różnica to baza/rolowanie; skoryguj „wg XTB”, jeśli chcesz dokładny wynik.
+              Wynik P&L zawiera skumulowany swap (poza ścieżką „wg XTB”).
             </p>
           </>
         )}

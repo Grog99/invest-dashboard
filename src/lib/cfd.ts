@@ -1,8 +1,11 @@
 // Pozycje CFD — POZA silnikiem FIFO/PIT-38 (src/lib/portfolio.ts), osobny
 // prosty byt (patrz docs/plans/pozycja-cfd.md). Hybrydowy P&L: override_pnl
 // (jeśli ustawiony) wygrywa nad wszystkim; inaczej wzór z efektywnej ceny
-// (override_price ?? quote_price). Ekspozycja jest tylko informacyjna — NIE
-// wchodzi do sumy portfela (dźwignia zawyżyłaby majątek wielokrotnie).
+// (override_price ?? quote_price), do którego doliczany jest ręczny,
+// skumulowany swap (swap_pln — patrz docs/plans/manualny-swap-cfd.md).
+// Gałąź override_pnl ("wg XTB") traktuje wartość jako już finalną i swapu
+// NIE dolicza. Ekspozycja jest tylko informacyjna — NIE wchodzi do sumy
+// portfela (dźwignia zawyżyłaby majątek wielokrotnie) i swap jej nie dotyczy.
 
 import { db, cfdPositions, type CfdPosition } from "@/db";
 
@@ -38,9 +41,10 @@ export function computeCfdPositions(): CfdSummary {
     } else if (effectivePrice !== null) {
       pnl =
         (effectivePrice - position.openPrice) *
-        sign *
-        position.volume *
-        position.pointValue;
+          sign *
+          position.volume *
+          position.pointValue +
+        (position.swapPln ?? 0);
       pnlSource = position.overridePrice !== null && position.overridePrice !== undefined
         ? "XTB"
         : "YAHOO";
