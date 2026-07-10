@@ -24,6 +24,7 @@ export const SETTING_KEYS = {
   cronNews: "cron_news",
   theme: "theme",
   dashboardBenchmark: "dashboard_benchmark_company_id",
+  newsRetentionLimit: "news_retention_limit",
 } as const;
 
 export const DEFAULT_MODEL = "anthropic/claude-sonnet-4.5";
@@ -39,6 +40,12 @@ export const DEFAULT_CRON = {
   quotes: "*/15 9-17 * * 1-5",
   news: "*/30 * * * *",
 } as const;
+
+// Retencja newsów (docs/plans/news-message-retention-limits.md): limit N
+// najnowszych wiadomości utrzymywanych per spółka i osobno dla puli
+// "ogólnych" (bez powiązania ze spółką). Jedna wspólna, konfigurowalna
+// wartość dla obu pul — patrz plan, sekcja "Pytania do doprecyzowania".
+export const DEFAULT_NEWS_RETENTION_LIMIT = 20;
 
 // Rocznik: "Dzień" (jasny papier) zatwierdzony jako motyw domyślny.
 // Odwrócenie: zmień z powrotem na "dark".
@@ -117,6 +124,29 @@ export function parseReasoningEffortSetting(
 ): ReasoningEffort | null {
   if (value == null || value.trim() === "") return null;
   return isValidReasoningEffort(value) ? value : null;
+}
+
+// --- Limit retencji newsów (news_retention_limit) ---
+// Dodatnia liczba całkowita; pusty/niepoprawny/spoza sensownego zakresu
+// string -> wartość domyślna (parytet z parseTemperatureSetting powyżej,
+// z tą różnicą, że tu zawsze zwracamy liczbę — nigdy null — bo "brak
+// retencji" nie jest poprawnym stanem, w przeciwieństwie do "brak
+// override'u parametru AI"). Górny sanity-cap chroni przed literówką typu
+// dopisanym zerem (np. 200000), nie jest częścią wymagań funkcjonalnych.
+const MAX_NEWS_RETENTION_LIMIT = 10000;
+
+export function isValidRetentionLimit(value: number): boolean {
+  return Number.isInteger(value) && value > 0 && value <= MAX_NEWS_RETENTION_LIMIT;
+}
+
+export function parseRetentionLimitSetting(value: string | null): number {
+  if (value == null || value.trim() === "") return DEFAULT_NEWS_RETENTION_LIMIT;
+  const n = Number(value.trim());
+  return isValidRetentionLimit(n) ? n : DEFAULT_NEWS_RETENTION_LIMIT;
+}
+
+export function getNewsRetentionLimit(): number {
+  return parseRetentionLimitSetting(getSetting(SETTING_KEYS.newsRetentionLimit));
 }
 
 // Puste/null/niepoprawne -> null ("nie wysyłaj max_results, użyj domyślnej

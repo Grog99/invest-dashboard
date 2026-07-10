@@ -5,12 +5,14 @@ import {
   SETTING_KEYS,
   DEFAULT_MODEL,
   DEFAULT_CRON,
+  DEFAULT_NEWS_RETENTION_LIMIT,
 } from "@/lib/settings";
 import { seedDefaultSourcesIfEmpty } from "@/lib/news";
 import { BUILTIN_TEMPLATES } from "@/lib/templates";
 import { Card, PageHeader } from "@/components/ui";
 import { AiSettingsForm } from "@/components/AiSettingsForm";
 import { ScheduleSettingsForm } from "@/components/ScheduleSettingsForm";
+import { NewsRetentionForm } from "@/components/NewsRetentionForm";
 import { SourcesManager } from "@/components/SourcesManager";
 import { TemplatesManager } from "@/components/TemplatesManager";
 
@@ -25,6 +27,9 @@ export default function SettingsPage() {
   const webSearchMaxResults = getSetting(SETTING_KEYS.aiWebSearchMaxResults) ?? "";
   const cronQuotes = getSetting(SETTING_KEYS.cronQuotes) ?? DEFAULT_CRON.quotes;
   const cronNews = getSetting(SETTING_KEYS.cronNews) ?? DEFAULT_CRON.news;
+  const newsRetentionLimit =
+    getSetting(SETTING_KEYS.newsRetentionLimit) ??
+    String(DEFAULT_NEWS_RETENTION_LIMIT);
   const sources = seedDefaultSourcesIfEmpty();
   const allCompanies = db
     .select()
@@ -65,6 +70,10 @@ export default function SettingsPage() {
 
         <Card title="Źródła newsów (RSS)">
           <SourcesManager sources={sources} companies={allCompanies} />
+        </Card>
+
+        <Card title="Retencja newsów">
+          <NewsRetentionForm limit={newsRetentionLimit} />
         </Card>
 
         <Card title="Szablony notatek">
