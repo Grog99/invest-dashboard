@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Label, Select } from "./ui";
-import { REASONING_EFFORTS, type ReasoningEffort } from "@/lib/ai-types";
+import {
+  REASONING_EFFORTS,
+  type ReasoningEffort,
+  WEB_SEARCH_MAX_RESULTS,
+} from "@/lib/ai-types";
 
 const REASONING_EFFORT_LABELS: Record<ReasoningEffort, string> = {
   low: "Niska (szybciej)",
@@ -18,6 +22,7 @@ export function AiSettingsForm({
   temperature,
   topP,
   reasoningEffort,
+  webSearchMaxResults,
 }: {
   model: string;
   hasApiKey: boolean;
@@ -26,6 +31,7 @@ export function AiSettingsForm({
   temperature: string;
   topP: string;
   reasoningEffort: string;
+  webSearchMaxResults: string;
 }) {
   const router = useRouter();
   const [apiKey, setApiKey] = useState("");
@@ -33,6 +39,9 @@ export function AiSettingsForm({
   const [temperatureValue, setTemperatureValue] = useState(temperature);
   const [topPValue, setTopPValue] = useState(topP);
   const [reasoningEffortValue, setReasoningEffortValue] = useState(reasoningEffort);
+  const [webSearchMaxResultsValue, setWebSearchMaxResultsValue] = useState(
+    webSearchMaxResults
+  );
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -45,6 +54,7 @@ export function AiSettingsForm({
         temperature: temperatureValue.trim(),
         topP: topPValue.trim(),
         reasoningEffort: reasoningEffortValue.trim(),
+        webSearchMaxResults: webSearchMaxResultsValue.trim(),
       };
       if (apiKey.trim()) payload.apiKey = apiKey.trim();
       const res = await fetch("/api/settings", {
@@ -163,6 +173,26 @@ export function AiSettingsForm({
         </Select>
         <p className="mt-1 text-[11px] text-muted">
           Głębokość „myślenia” modelu (jeśli wspiera). Puste = nie wysyłaj (domyślna modelu).
+        </p>
+      </div>
+      <div>
+        <Label htmlFor="ai-web-search-max-results">Liczba wyników web searchu</Label>
+        <Select
+          id="ai-web-search-max-results"
+          value={webSearchMaxResultsValue}
+          onChange={(e) => setWebSearchMaxResultsValue(e.target.value)}
+        >
+          <option value="">Domyślne providera (5 wyników)</option>
+          {WEB_SEARCH_MAX_RESULTS.map((n) => (
+            <option key={n} value={n}>
+              {n} wyników
+            </option>
+          ))}
+        </Select>
+        <p className="mt-1 text-[11px] text-muted">
+          Liczba stron przeszukiwanych podczas analizy AI z web searchem — domyślna dla
+          nowych analiz (można nadpisać w modalu „Analiza AI”). Więcej wyników = wyższy
+          koszt i dłuższy czas zapytania.
         </p>
       </div>
       <div className="flex items-center gap-3">

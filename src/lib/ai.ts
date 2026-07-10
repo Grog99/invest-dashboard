@@ -17,6 +17,7 @@ import {
   parseTemperatureSetting,
   parseTopPSetting,
   parseReasoningEffortSetting,
+  parseMaxResultsSetting,
   type ReasoningEffort,
 } from "./settings";
 import { computePortfolio } from "./portfolio";
@@ -32,6 +33,7 @@ export function getAiConfig(): {
   temperature: number | null;
   topP: number | null;
   reasoningEffort: ReasoningEffort | null;
+  webSearchMaxResults: number | null;
 } {
   return {
     apiKey: getSetting(SETTING_KEYS.openrouterApiKey),
@@ -42,6 +44,9 @@ export function getAiConfig(): {
     topP: parseTopPSetting(getSetting(SETTING_KEYS.aiTopP)),
     reasoningEffort: parseReasoningEffortSetting(
       getSetting(SETTING_KEYS.aiReasoningEffort)
+    ),
+    webSearchMaxResults: parseMaxResultsSetting(
+      getSetting(SETTING_KEYS.aiWebSearchMaxResults)
     ),
   };
 }
@@ -162,10 +167,16 @@ export const webSearchSystemHint = `Masz dostęp do web searchu — użyj go, ab
 
 // Zwraca tablicę `plugins` do body OpenRoutera dla web searchu (id "web"
 // dosłownie — potwierdzone w docs OpenRoutera), albo undefined gdy wyłączony.
+// `maxResults` sterowalne (override z modalu ?? domyślna z Ustawień) — gdy
+// null/undefined, pole `max_results` jest pomijane w body i OpenRouter
+// stosuje swoją domyślną (5), czyli zachowanie tożsame z dawnym hardcodem.
 function buildWebPlugins(
-  webSearch?: boolean
-): Array<{ id: "web"; max_results: number }> | undefined {
-  return webSearch ? [{ id: "web", max_results: 5 }] : undefined;
+  webSearch?: boolean,
+  maxResults?: number | null
+): Array<{ id: "web"; max_results?: number }> | undefined {
+  return webSearch
+    ? [{ id: "web", ...(maxResults != null ? { max_results: maxResults } : {}) }]
+    : undefined;
 }
 
 // Buduje pole `reasoning` do body OpenRoutera — wzorowane 1:1 na
@@ -191,6 +202,7 @@ export async function openrouterChat(
     temperature?: number;
     topP?: number;
     reasoning?: ReasoningEffort;
+    maxResults?: number;
   } = {}
 ): Promise<Response> {
   const {
@@ -199,6 +211,7 @@ export async function openrouterChat(
     temperature: defaultTemperature,
     topP: defaultTopP,
     reasoningEffort: defaultReasoningEffort,
+    webSearchMaxResults,
   } = getAiConfig();
   if (!apiKey) {
     throw new Error(
@@ -206,7 +219,10 @@ export async function openrouterChat(
     );
   }
   const model = options.model?.trim() || defaultModel;
-  const plugins = buildWebPlugins(options.webSearch);
+  const plugins = buildWebPlugins(
+    options.webSearch,
+    options.maxResults ?? webSearchMaxResults ?? undefined
+  );
   const temperature = options.temperature ?? defaultTemperature ?? undefined;
   const topP = options.topP ?? defaultTopP ?? undefined;
   const reasoning = buildReasoning(

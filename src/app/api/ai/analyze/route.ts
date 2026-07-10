@@ -11,6 +11,7 @@ import {
   isValidTemperature,
   isValidTopP,
   isValidReasoningEffort,
+  isValidMaxResults,
 } from "@/lib/settings";
 
 export const maxDuration = 300;
@@ -65,6 +66,16 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+  const maxResults =
+    typeof body.maxResults === "number" && Number.isFinite(body.maxResults)
+      ? body.maxResults
+      : undefined;
+  if (maxResults !== undefined && !isValidMaxResults(maxResults)) {
+    return NextResponse.json(
+      { error: "Liczba wyników web searchu musi być jedną z: 3, 5, 10, 15, 20." },
+      { status: 400 }
+    );
+  }
 
   if (mode === "generate" && !companyId) {
     return NextResponse.json(
@@ -101,7 +112,15 @@ export async function POST(req: NextRequest) {
         { role: "system", content: system },
         { role: "user", content: user },
       ],
-      { stream: false, model, webSearch, temperature, topP, reasoning: reasoningEffort }
+      {
+        stream: false,
+        model,
+        webSearch,
+        temperature,
+        topP,
+        reasoning: reasoningEffort,
+        maxResults,
+      }
     );
     const data = await upstream.json();
     const content = data?.choices?.[0]?.message?.content;

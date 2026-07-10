@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { Modal } from "./Modal";
 import { Button, Input, Label, Select, Textarea } from "./ui";
-import { REASONING_EFFORTS } from "@/lib/ai-types";
+import { REASONING_EFFORTS, WEB_SEARCH_MAX_RESULTS } from "@/lib/ai-types";
 import type { Company } from "@/db/schema";
 
 type Mode = "fill" | "generate";
@@ -69,6 +69,7 @@ export function AiAnalyzeModal({
   defaultTemperature,
   defaultTopP,
   defaultReasoningEffort,
+  defaultMaxResults,
   onFillResult,
   onGenerateResult,
 }: {
@@ -85,6 +86,7 @@ export function AiAnalyzeModal({
   defaultTemperature?: string;
   defaultTopP?: string;
   defaultReasoningEffort?: string;
+  defaultMaxResults?: string;
   /** Tryb "fill": nadpisz całą treść notatki wynikiem. */
   onFillResult: (text: string) => void;
   /** Tryb "generate": doklej wynik po nagłówku "---". */
@@ -97,6 +99,7 @@ export function AiAnalyzeModal({
   const [temperature, setTemperature] = useState("");
   const [topP, setTopP] = useState("");
   const [reasoningEffort, setReasoningEffort] = useState("");
+  const [maxResults, setMaxResults] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
@@ -147,6 +150,7 @@ export function AiAnalyzeModal({
           temperature: temperature.trim() ? Number(temperature) : undefined,
           topP: topP.trim() ? Number(topP) : undefined,
           reasoningEffort: reasoningEffort || undefined,
+          maxResults: webSearch && maxResults ? Number(maxResults) : undefined,
         }),
       });
       const data = await res.json();
@@ -224,11 +228,35 @@ export function AiAnalyzeModal({
             <span>
               Web search
               <span className="block text-[11px] text-muted">
-                Model przeszuka internet i zacytuje źródła — może zwiększyć koszt zapytania.
+                Model przeszuka internet i zacytuje źródła — dolicza się nawet przy
+                darmowych modelach.
               </span>
             </span>
           </label>
         </div>
+
+        {webSearch && (
+          <div>
+            <Label htmlFor="ai-modal-max-results">Liczba wyników (opcjonalnie)</Label>
+            <Select
+              id="ai-modal-max-results"
+              value={maxResults}
+              onChange={(e) => setMaxResults(e.target.value)}
+            >
+              <option value="">
+                Domyślne (globalne{defaultMaxResults ? `: ${defaultMaxResults}` : ""})
+              </option>
+              {WEB_SEARCH_MAX_RESULTS.map((n) => (
+                <option key={n} value={n}>
+                  {n} wyników
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-[11px] text-muted">
+              do 10 wyników ~$0.005, każdy kolejny +$0.001.
+            </p>
+          </div>
+        )}
 
         <div>
           <Label htmlFor="ai-modal-instructions">Dodatkowe instrukcje (opcjonalnie)</Label>

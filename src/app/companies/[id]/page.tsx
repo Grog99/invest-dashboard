@@ -26,7 +26,6 @@ import {
   Table,
   Th,
   Td,
-  Delta,
   Badge,
   EmptyState,
   Field,
