@@ -16,6 +16,44 @@ import {
 
 export const maxDuration = 300;
 
+// Proxyuje strumień SSE z OpenRoutera do klienta, wstrzykując co ~15 s komentarz
+// keep-alive (": ping"). Bez tego reverse proxy przed kontenerem (nginx
+// proxy_read_timeout, Cloudflare ~100 s itp.) zrywa połączenie błędem 504
+// podczas ciszy zanim polecą pierwsze tokeny (faza web searchu / rozgrzewki
+// reasoningu). Klient ignoruje linie zaczynające się od ":" (patrz sse.ts).
+function sseWithHeartbeat(
+  upstream: ReadableStream<Uint8Array>
+): ReadableStream<Uint8Array> {
+  const reader = upstream.getReader();
+  const encoder = new TextEncoder();
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const heartbeat = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode(": ping\n\n"));
+        } catch {
+          // strumień już zamknięty — ignorujemy
+        }
+      }, 15000);
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          controller.enqueue(value);
+        }
+        controller.close();
+      } catch (e) {
+        controller.error(e);
+      } finally {
+        clearInterval(heartbeat);
+      }
+    },
+    cancel(reason) {
+      reader.cancel(reason);
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const mode = body.mode === "fill" || body.mode === "generate" ? body.mode : null;
@@ -106,6 +144,13 @@ export async function POST(req: NextRequest) {
       ? `${FILL_DRAFT_INSTRUCTION}\n\n${draft}${instructions ? `\n\n${instructions}` : ""}`
       : `${AI_RESEARCH_PROMPT}${instructions ? `\n\n${instructions}` : ""}`;
 
+  // Streaming (nie non-streaming): pełna analiza z web searchem + reasoningiem
+  // potrafi trwać minuty. Przy buforowaniu całości po stronie serwera reverse
+  // proxy nie widzi żadnych bajtów i zrywa połączenie błędem 504 (klient
+  // dostawał wtedy stronę HTML błędu → „Unexpected token '<'"). Strumieniujemy
+  // SSE token po tokenie (jak /api/ai/chat) — połączenie żyje. `includeUsage`
+  // dosyła koszt/tokeny w ostatnim chunku; klient wyciąga je z SSE (patrz
+  // streamAnalyze w src/lib/sse.ts).
   try {
     const upstream = await openrouterChat(
       [
@@ -113,7 +158,8 @@ export async function POST(req: NextRequest) {
         { role: "user", content: user },
       ],
       {
-        stream: false,
+        stream: true,
+        includeUsage: true,
         model,
         webSearch,
         temperature,
@@ -122,26 +168,21 @@ export async function POST(req: NextRequest) {
         maxResults,
       }
     );
-    const data = await upstream.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (typeof content !== "string" || !content.trim()) {
+    if (!upstream.body) {
       return NextResponse.json(
-        { error: "AI nie zwróciło treści (możliwy refusal lub błąd modelu)." },
+        { error: "Brak strumienia odpowiedzi z OpenRoutera." },
         { status: 502 }
       );
     }
-    // Usage accounting OpenRoutera — zawsze automatycznie dołączane do
-    // odpowiedzi non-streaming (patrz plan, Podejście pkt 3). Wszystkie pola
-    // opcjonalne (mogą być undefined/0/null w zależności od providera).
-    const usage = {
-      cost: data?.usage?.cost,
-      totalTokens: data?.usage?.total_tokens,
-      promptTokens: data?.usage?.prompt_tokens,
-      completionTokens: data?.usage?.completion_tokens,
-      reasoningTokens: data?.usage?.completion_tokens_details?.reasoning_tokens,
-      costDetails: data?.usage?.cost_details,
-    };
-    return NextResponse.json({ content, usage });
+    return new Response(sseWithHeartbeat(upstream.body), {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        // Wyłącza buforowanie odpowiedzi przez nginx/reverse proxy — bez tego
+        // SSE może być buforowane i keep-alive nie dociera na czas.
+        "X-Accel-Buffering": "no",
+      },
+    });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : String(e) },

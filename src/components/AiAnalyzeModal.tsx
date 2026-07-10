@@ -1,26 +1,22 @@
 "use client";
 
 // Modal „Analiza AI" — dwa tryby (Uzupełnij szkic / Wygeneruj od zera),
-// web search, dodatkowe instrukcje, override modelu. Non-streaming — jeden
-// POST /api/ai/analyze, czeka na pełną odpowiedź. Patrz
-// docs/plans/ai-analiza-notatki.md, sekcja „UI (warstwa UI)".
+// web search, dodatkowe instrukcje, override modelu. Streaming: POST
+// /api/ai/analyze przez streamAnalyze (SSE) — treść akumulowana i aplikowana
+// po zakończeniu, koszt/tokeny z ostatniego chunku. Streaming zamiast dawnego
+// non-streaming, żeby długa analiza nie kończyła się 504 na reverse proxy
+// (patrz docs/plans/ai-analiza-504-streaming.md).
 
 import { useState } from "react";
 import { Modal } from "./Modal";
 import { Button, Input, Label, Select, Textarea } from "./ui";
 import { REASONING_EFFORTS, WEB_SEARCH_MAX_RESULTS } from "@/lib/ai-types";
+import { streamAnalyze, type AnalyzeUsage } from "@/lib/sse";
 import type { Company } from "@/db/schema";
 
 type Mode = "fill" | "generate";
 
-type Usage = {
-  cost?: number;
-  totalTokens?: number;
-  promptTokens?: number;
-  completionTokens?: number;
-  reasoningTokens?: number;
-  costDetails?: Record<string, unknown>;
-};
+type Usage = AnalyzeUsage;
 
 const REASONING_EFFORT_LABELS: Record<(typeof REASONING_EFFORTS)[number], string> = {
   low: "Niska (szybciej)",
@@ -137,33 +133,33 @@ export function AiAnalyzeModal({
     setError(null);
     setUsage(null);
     try {
-      const res = await fetch("/api/ai/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode,
-          draft: mode === "fill" ? content : undefined,
-          companyId: companyId ? Number(companyId) : null,
-          webSearch,
-          model: model.trim() || undefined,
-          instructions: instructions.trim() || undefined,
-          temperature: temperature.trim() ? Number(temperature) : undefined,
-          topP: topP.trim() ? Number(topP) : undefined,
-          reasoningEffort: reasoningEffort || undefined,
-          maxResults: webSearch && maxResults ? Number(maxResults) : undefined,
-        }),
+      const { content: result, usage } = await streamAnalyze({
+        mode,
+        draft: mode === "fill" ? content : undefined,
+        companyId: companyId ? Number(companyId) : null,
+        webSearch,
+        model: model.trim() || undefined,
+        instructions: instructions.trim() || undefined,
+        temperature: temperature.trim() ? Number(temperature) : undefined,
+        topP: topP.trim() ? Number(topP) : undefined,
+        reasoningEffort: reasoningEffort || undefined,
+        maxResults: webSearch && maxResults ? Number(maxResults) : undefined,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      // Pusta treść (refusal/błąd modelu) — nie nadpisujemy notatki pustką.
+      if (!result.trim()) {
+        throw new Error(
+          "AI nie zwróciło treści (możliwy refusal lub błąd modelu)."
+        );
+      }
       if (mode === "fill") {
-        onFillResult(data.content as string);
+        onFillResult(result);
       } else {
-        onGenerateResult(data.content as string);
+        onGenerateResult(result);
       }
       // Wynik już zaaplikowany do notatki — modal zostaje otwarty, żeby
       // pokazać koszt/tokeny; zamyka go teraz przycisk "Zamknij" (patrz
       // plan, Podejście pkt 5 — zmiana UX, modal nie zamyka się sam).
-      setUsage((data.usage as Usage) ?? {});
+      setUsage(usage);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

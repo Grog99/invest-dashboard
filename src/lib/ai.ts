@@ -203,6 +203,9 @@ export async function openrouterChat(
     topP?: number;
     reasoning?: ReasoningEffort;
     maxResults?: number;
+    // Dolicza blok `usage` (koszt/tokeny) do odpowiedzi. Przy stream:true
+    // OpenRouter dosyła go w ostatnim chunku SSE (usaccounting per plan).
+    includeUsage?: boolean;
   } = {}
 ): Promise<Response> {
   const {
@@ -244,6 +247,7 @@ export async function openrouterChat(
       ...(temperature != null ? { temperature } : {}),
       ...(topP != null ? { top_p: topP } : {}),
       ...(reasoning ? { reasoning } : {}),
+      ...(options.includeUsage ? { usage: { include: true } } : {}),
     }),
     signal: AbortSignal.timeout(180000),
   });
