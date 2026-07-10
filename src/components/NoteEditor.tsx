@@ -32,12 +32,19 @@ export function NoteEditor({
   defaultCompanyId,
   templates,
   defaultModel,
+  defaultTemperature,
+  defaultTopP,
+  defaultReasoningEffort,
 }: {
   note?: Note;
   companies: Company[];
   defaultCompanyId?: number;
   templates?: TemplateOption[];
   defaultModel: string;
+  /** Wartości domyślne z Ustawień (stringi, "" = brak) — przekazywane dalej do AiAnalyzeModal jako placeholdery. */
+  defaultTemperature?: string;
+  defaultTopP?: string;
+  defaultReasoningEffort?: string;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(note?.title ?? "");
@@ -359,6 +366,9 @@ export function NoteEditor({
         companyId={companyId}
         onCompanyIdChange={setCompanyId}
         defaultModel={defaultModel}
+        defaultTemperature={defaultTemperature}
+        defaultTopP={defaultTopP}
+        defaultReasoningEffort={defaultReasoningEffort}
         onFillResult={handleFillResult}
         onGenerateResult={handleGenerateResult}
       />

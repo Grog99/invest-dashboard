@@ -23,7 +23,12 @@ export default async function NotePage({
     .from(companies)
     .orderBy(asc(companies.ticker))
     .all();
-  const { model: defaultModel } = getAiConfig();
+  const {
+    model: defaultModel,
+    temperature,
+    topP,
+    reasoningEffort,
+  } = getAiConfig();
 
   return (
     <div>
@@ -40,7 +45,14 @@ export default async function NotePage({
         }
       />
       <Card>
-        <NoteEditor note={note} companies={allCompanies} defaultModel={defaultModel} />
+        <NoteEditor
+          note={note}
+          companies={allCompanies}
+          defaultModel={defaultModel}
+          defaultTemperature={temperature != null ? String(temperature) : ""}
+          defaultTopP={topP != null ? String(topP) : ""}
+          defaultReasoningEffort={reasoningEffort ?? ""}
+        />
       </Card>
     </div>
   );

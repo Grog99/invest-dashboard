@@ -8,6 +8,9 @@ import {
   SETTING_KEYS,
   DEFAULT_MODEL,
   DEFAULT_CRON,
+  isValidTemperature,
+  isValidTopP,
+  isValidReasoningEffort,
 } from "@/lib/settings";
 import { reloadScheduler } from "@/lib/scheduler";
 
@@ -20,6 +23,9 @@ export async function GET() {
     cronQuotes: getSetting(SETTING_KEYS.cronQuotes) ?? DEFAULT_CRON.quotes,
     cronNews: getSetting(SETTING_KEYS.cronNews) ?? DEFAULT_CRON.news,
     theme: getTheme(),
+    temperature: getSetting(SETTING_KEYS.aiTemperature) ?? "",
+    topP: getSetting(SETTING_KEYS.aiTopP) ?? "",
+    reasoningEffort: getSetting(SETTING_KEYS.aiReasoningEffort) ?? "",
   });
 }
 
@@ -60,6 +66,47 @@ export async function POST(req: NextRequest) {
       sameSite: "lax",
       httpOnly: true,
     });
+  }
+
+  // Temperature/top_p/reasoning effort: pusty string = wyczyść (nie wysyłaj
+  // parametru, model użyje domyślnej), niepusty musi przejść walidację
+  // zakresu — inaczej 400 i nic nie zapisujemy (spójnie z walidacją cron
+  // powyżej).
+  if (typeof body.temperature === "string") {
+    const trimmed = body.temperature.trim();
+    if (trimmed && !isValidTemperature(Number(trimmed))) {
+      return NextResponse.json(
+        { error: "Temperature musi być w zakresie 0–2." },
+        { status: 400 }
+      );
+    }
+  }
+  if (typeof body.topP === "string") {
+    const trimmed = body.topP.trim();
+    if (trimmed && !isValidTopP(Number(trimmed))) {
+      return NextResponse.json(
+        { error: "Top P musi być w zakresie 0–1." },
+        { status: 400 }
+      );
+    }
+  }
+  if (typeof body.reasoningEffort === "string") {
+    const trimmed = body.reasoningEffort.trim();
+    if (trimmed && !isValidReasoningEffort(trimmed)) {
+      return NextResponse.json(
+        { error: "Reasoning effort musi być jednym z: low, medium, high." },
+        { status: 400 }
+      );
+    }
+  }
+  if (typeof body.temperature === "string") {
+    setSetting(SETTING_KEYS.aiTemperature, body.temperature.trim());
+  }
+  if (typeof body.topP === "string") {
+    setSetting(SETTING_KEYS.aiTopP, body.topP.trim());
+  }
+  if (typeof body.reasoningEffort === "string") {
+    setSetting(SETTING_KEYS.aiReasoningEffort, body.reasoningEffort.trim());
   }
 
   // "" czyści wybór ("Brak"); wartość musi być dodatnią liczbą całkowitą,

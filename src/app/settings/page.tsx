@@ -19,6 +19,9 @@ export const dynamic = "force-dynamic";
 export default function SettingsPage() {
   const apiKey = getSetting(SETTING_KEYS.openrouterApiKey);
   const model = getSetting(SETTING_KEYS.openrouterModel) || DEFAULT_MODEL;
+  const temperature = getSetting(SETTING_KEYS.aiTemperature) ?? "";
+  const topP = getSetting(SETTING_KEYS.aiTopP) ?? "";
+  const reasoningEffort = getSetting(SETTING_KEYS.aiReasoningEffort) ?? "";
   const cronQuotes = getSetting(SETTING_KEYS.cronQuotes) ?? DEFAULT_CRON.quotes;
   const cronNews = getSetting(SETTING_KEYS.cronNews) ?? DEFAULT_CRON.news;
   const sources = seedDefaultSourcesIfEmpty();
@@ -48,6 +51,9 @@ export default function SettingsPage() {
             apiKeyPreview={
               apiKey ? `${apiKey.slice(0, 8)}…${apiKey.slice(-4)}` : null
             }
+            temperature={temperature}
+            topP={topP}
+            reasoningEffort={reasoningEffort}
           />
         </Card>
 

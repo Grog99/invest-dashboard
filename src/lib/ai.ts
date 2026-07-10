@@ -10,7 +10,15 @@ import {
   quotesLatest,
 } from "@/db";
 import { desc, eq } from "drizzle-orm";
-import { getSetting, SETTING_KEYS, DEFAULT_MODEL } from "./settings";
+import {
+  getSetting,
+  SETTING_KEYS,
+  DEFAULT_MODEL,
+  parseTemperatureSetting,
+  parseTopPSetting,
+  parseReasoningEffortSetting,
+  type ReasoningEffort,
+} from "./settings";
 import { computePortfolio } from "./portfolio";
 
 export interface ChatMessage {
@@ -18,10 +26,23 @@ export interface ChatMessage {
   content: string;
 }
 
-export function getAiConfig(): { apiKey: string | null; model: string } {
+export function getAiConfig(): {
+  apiKey: string | null;
+  model: string;
+  temperature: number | null;
+  topP: number | null;
+  reasoningEffort: ReasoningEffort | null;
+} {
   return {
     apiKey: getSetting(SETTING_KEYS.openrouterApiKey),
     model: getSetting(SETTING_KEYS.openrouterModel) || DEFAULT_MODEL,
+    temperature: parseTemperatureSetting(
+      getSetting(SETTING_KEYS.aiTemperature)
+    ),
+    topP: parseTopPSetting(getSetting(SETTING_KEYS.aiTopP)),
+    reasoningEffort: parseReasoningEffortSetting(
+      getSetting(SETTING_KEYS.aiReasoningEffort)
+    ),
   };
 }
 
@@ -147,12 +168,38 @@ function buildWebPlugins(
   return webSearch ? [{ id: "web", max_results: 5 }] : undefined;
 }
 
+// Buduje pole `reasoning` do body OpenRoutera — wzorowane 1:1 na
+// buildWebPlugins powyżej. Tylko `effort` (non-goal: max_tokens/exclude,
+// patrz plan). undefined = pole pominięte w body (model użyje swojej
+// domyślnej głębokości myślenia).
+function buildReasoning(
+  effort?: ReasoningEffort | null
+): { effort: ReasoningEffort } | undefined {
+  return effort ? { effort } : undefined;
+}
+
 // Wywołanie OpenRouter — zwraca surowy Response (SSE przy stream: true).
+// Efektywna wartość każdego opcjonalnego parametru: override z `options` ??
+// domyślna z Ustawień (getAiConfig) ?? pominięcie parametru w body (patrz
+// plan docs/plans/openrouter-analiza-ai-config.md, Podejście pkt 1).
 export async function openrouterChat(
   messages: ChatMessage[],
-  options: { stream?: boolean; model?: string; webSearch?: boolean } = {}
+  options: {
+    stream?: boolean;
+    model?: string;
+    webSearch?: boolean;
+    temperature?: number;
+    topP?: number;
+    reasoning?: ReasoningEffort;
+  } = {}
 ): Promise<Response> {
-  const { apiKey, model: defaultModel } = getAiConfig();
+  const {
+    apiKey,
+    model: defaultModel,
+    temperature: defaultTemperature,
+    topP: defaultTopP,
+    reasoningEffort: defaultReasoningEffort,
+  } = getAiConfig();
   if (!apiKey) {
     throw new Error(
       "Brak klucza OpenRouter. Dodaj klucz API w Ustawieniach."
@@ -160,6 +207,11 @@ export async function openrouterChat(
   }
   const model = options.model?.trim() || defaultModel;
   const plugins = buildWebPlugins(options.webSearch);
+  const temperature = options.temperature ?? defaultTemperature ?? undefined;
+  const topP = options.topP ?? defaultTopP ?? undefined;
+  const reasoning = buildReasoning(
+    options.reasoning ?? defaultReasoningEffort ?? undefined
+  );
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -173,6 +225,9 @@ export async function openrouterChat(
       messages,
       stream: options.stream ?? false,
       ...(plugins ? { plugins } : {}),
+      ...(temperature != null ? { temperature } : {}),
+      ...(topP != null ? { top_p: topP } : {}),
+      ...(reasoning ? { reasoning } : {}),
     }),
     signal: AbortSignal.timeout(180000),
   });

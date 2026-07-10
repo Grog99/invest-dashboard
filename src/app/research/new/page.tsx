@@ -24,7 +24,12 @@ export default async function NewNotePage({
     .orderBy(asc(noteTemplates.name))
     .all();
   const templateOptions = buildTemplateOptions(userTemplates);
-  const { model: defaultModel } = getAiConfig();
+  const {
+    model: defaultModel,
+    temperature,
+    topP,
+    reasoningEffort,
+  } = getAiConfig();
 
   return (
     <div>
@@ -35,6 +40,9 @@ export default async function NewNotePage({
           defaultCompanyId={sp.companyId ? Number(sp.companyId) : undefined}
           templates={templateOptions}
           defaultModel={defaultModel}
+          defaultTemperature={temperature != null ? String(temperature) : ""}
+          defaultTopP={topP != null ? String(topP) : ""}
+          defaultReasoningEffort={reasoningEffort ?? ""}
         />
       </Card>
     </div>
