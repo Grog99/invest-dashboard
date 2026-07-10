@@ -1,7 +1,7 @@
 "use client";
 
 // Edytor notatki researchowej: markdown + podgląd, przypisanie do spółki,
-// analiza AI przez modal (non-streaming, patrz AiAnalyzeModal + /api/ai/analyze).
+// analiza AI przez modal (streaming SSE, patrz AiAnalyzeModal + /api/ai/analyze).
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
