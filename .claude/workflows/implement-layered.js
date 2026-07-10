@@ -1,18 +1,18 @@
 export const meta = {
   name: 'implement-layered',
-  description: 'Implementuje feature z planu warstwami: dane -> API -> UI, z handoffem schematu miedzy warstwami i petla weryfikacji lint+build',
+  description: 'Implementuje feature z planu warstwami: dane -> backend -> frontend, z handoffem schematu miedzy warstwami i petla weryfikacji lint+build',
   whenToUse: 'Gdy plan (docs/plans/<slug>.md) jest zaakceptowany i chcesz zaimplementowac feature warstwowo z deterministycznym porzadkiem i strukturyzowanym przekazaniem kontekstu miedzy warstwami.',
   phases: [
     { title: 'Warstwa danych', detail: 'schema Drizzle, CREATE TABLE w bootstrapie, czyste funkcje w src/lib', model: 'sonnet' },
-    { title: 'Warstwa API', detail: 'route handlery na bazie warstwy danych', model: 'sonnet' },
-    { title: 'Warstwa UI', detail: 'komponenty i strony konsumujace API (mobile 360-390px)', model: 'sonnet' },
+    { title: 'Warstwa backend', detail: 'route handlery, zadania w tle/harmonogramy (node-cron, instrumentation.ts), middleware, integracje zewnetrzne', model: 'sonnet' },
+    { title: 'Warstwa frontend', detail: 'komponenty i strony konsumujace backend (mobile 360-390px)', model: 'sonnet' },
     { title: 'Weryfikacja', detail: 'npm run lint + npm run build, ograniczona petla napraw', model: 'sonnet' },
   ],
 }
 
 // --- Wejscie ze skilla: { planPath, layers } ---
 // planPath: sciezka do docs/plans/<slug>.md
-// layers:   podzbior ['dane','api','ui'] w kolejnosci; puste => wszystkie trzy
+// layers:   podzbior ['dane','backend','frontend'] w kolejnosci; puste => wszystkie trzy
 //
 // UWAGA: parametr `args` toola Workflow bywa dostarczany do skryptu jako JSON-string,
 // a nie jako gotowy obiekt (zaobserwowane: `typeof args === 'string'`). Bez normalizacji
@@ -29,7 +29,7 @@ if (!planPath) {
     'Otrzymano args typu "' + typeof args + '": ' + JSON.stringify(args)
   )
 }
-const wanted = (input && Array.isArray(input.layers) && input.layers.length) ? input.layers : ['dane', 'api', 'ui']
+const wanted = (input && Array.isArray(input.layers) && input.layers.length) ? input.layers : ['dane', 'backend', 'frontend']
 const present = new Set(wanted)
 
 // --- Reguly wspolne (wstrzykiwane w prompty) ---
@@ -59,10 +59,10 @@ const DATA_SCHEMA = {
     },
     exports: { type: 'array', items: { type: 'string' }, description: 'Typy i funkcje z sygnaturami, np. "computeCfdPositions(): { positions, totalCfdPnlPln }"' },
     files: { type: 'array', items: { type: 'string' } },
-    notesForApi: { type: 'string', description: 'Co warstwa API musi wiedziec (nazwy funkcji, ksztalt danych)' },
+    notesForBackend: { type: 'string', description: 'Co warstwa backend musi wiedziec (nazwy funkcji, ksztalt danych)' },
   },
 }
-const API_SCHEMA = {
+const BACKEND_SCHEMA = {
   type: 'object',
   required: ['summary', 'files'],
   properties: {
@@ -80,11 +80,24 @@ const API_SCHEMA = {
         },
       },
     },
+    backgroundJobs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: { type: 'string' },
+          schedule: { type: 'string', description: 'np. wyrazenie cron' },
+          description: { type: 'string' },
+        },
+      },
+      description: 'Zadania w tle/harmonogramy zarejestrowane lub zmienione w tej warstwie (np. node-cron w src/lib/scheduler.ts, src/instrumentation.ts)',
+    },
     files: { type: 'array', items: { type: 'string' } },
-    notesForUi: { type: 'string', description: 'Co warstwa UI musi wiedziec (endpointy, ksztalty, kody bledow)' },
+    notesForFrontend: { type: 'string', description: 'Co warstwa frontend musi wiedziec (endpointy, ksztalty, kody bledow)' },
   },
 }
-const UI_SCHEMA = {
+const FRONTEND_SCHEMA = {
   type: 'object',
   required: ['summary', 'files'],
   properties: {
@@ -121,8 +134,8 @@ const REPAIR_SCHEMA = {
 const impl = (label, phaseTitle, schema) => ({ label, phase: phaseTitle, schema, agentType: 'general-purpose', model: 'sonnet', effort: 'high' })
 
 let data = null
-let api = null
-let ui = null
+let backend = null
+let frontend = null
 
 // --- Warstwa 1: dane (Baza + Logika) ---
 if (present.has('dane')) {
@@ -131,45 +144,46 @@ if (present.has('dane')) {
     [
       `Przeczytaj plan: ${planPath}. Zaimplementuj TYLKO warstwe danych: sekcje "Baza (warstwa danych)" i logike domenowa w src/lib/`,
       'z sekcji "Pliki do zmiany" (schema Drizzle w src/db/schema.ts, CREATE TABLE IF NOT EXISTS w bootstrapie src/db/index.ts,',
-      'czyste funkcje liczace w src/lib/, ewentualny potok odswiezania cen). NIE dotykaj route handlerow ani UI.',
+      'czyste funkcje liczace w src/lib/, ewentualny potok odswiezania cen). NIE dotykaj route handlerow, kodu backendu (zadania w tle/harmonogramy, middleware) ani frontendu.',
       'Nowa tabela wylacznie przez CREATE TABLE IF NOT EXISTS w BOOTSTRAP_SQL — zadnych ALTER/zapisow na poziomie importu modulu (patrz komentarze o SQLITE_BUSY w src/db/index.ts).',
       REUSE_RULE,
       NEXT_RULE,
-      'Zwroc strukture: utworzone/zmienione tabele z kolumnami, wyeksportowane typy i funkcje (z sygnaturami), liste zmienionych plikow oraz uwagi dla warstwy API (notesForApi).',
+      'Zwroc strukture: utworzone/zmienione tabele z kolumnami, wyeksportowane typy i funkcje (z sygnaturami), liste zmienionych plikow oraz uwagi dla warstwy backend (notesForBackend).',
     ].join('\n'),
     impl('impl:dane', 'Warstwa danych', DATA_SCHEMA)
   )
 }
 
-// --- Warstwa 2: API (dostaje KONKRET z warstwy danych) ---
-if (present.has('api')) {
-  phase('Warstwa API')
-  api = await agent(
+// --- Warstwa 2: backend (dostaje KONKRET z warstwy danych) ---
+if (present.has('backend')) {
+  phase('Warstwa backend')
+  backend = await agent(
     [
-      `Przeczytaj plan: ${planPath}, sekcja "API (warstwa API)" z "Pliki do zmiany". Zaimplementuj TYLKO route handlery.`,
+      `Przeczytaj plan: ${planPath}, sekcja "Backend (warstwa backend)" z "Pliki do zmiany". Zaimplementuj TYLKO warstwe backendu:`,
+      'route handlery ORAZ kod serwerowy poza HTTP opisany w tej sekcji — zadania w tle/harmonogramy (node-cron, src/instrumentation.ts, src/lib/scheduler.ts), middleware, integracje zewnetrzne. NIE dotykaj frontendu.',
       data ? `Warstwa danych JEST GOTOWA — uzyj DOKLADNIE tych tabel, typow i funkcji (nie zgaduj nazw ani sygnatur):\n${JSON.stringify(data, null, 2)}` : 'Warstwa danych nie byla czescia tej orkiestracji — oprzyj sie na istniejacym kodzie i planie.',
       REUSE_RULE,
       NEXT_RULE,
-      'Zwroc: liste endpointow (metoda, sciezka, ksztalt request/response), zmienione pliki oraz uwagi dla warstwy UI (notesForUi).',
+      'Zwroc: liste endpointow (metoda, sciezka, ksztalt request/response), liste zadan w tle/harmonogramow (backgroundJobs: nazwa, harmonogram, opis) jesli feature je dotyczy, zmienione pliki oraz uwagi dla warstwy frontend (notesForFrontend).',
     ].join('\n'),
-    impl('impl:api', 'Warstwa API', API_SCHEMA)
+    impl('impl:backend', 'Warstwa backend', BACKEND_SCHEMA)
   )
 }
 
-// --- Warstwa 3: UI (dostaje konkret z API, a gdy brak API to z warstwy danych) ---
-if (present.has('ui')) {
-  phase('Warstwa UI')
-  ui = await agent(
+// --- Warstwa 3: frontend (dostaje konkret z backendu, a gdy brak backendu to z warstwy danych) ---
+if (present.has('frontend')) {
+  phase('Warstwa frontend')
+  frontend = await agent(
     [
-      `Przeczytaj plan: ${planPath}, sekcja "UI (warstwa UI)" z "Pliki do zmiany". Zaimplementuj TYLKO komponenty i strony.`,
-      api ? `API JEST GOTOWE — wolaj dokladnie te endpointy i ksztalty:\n${JSON.stringify(api.endpoints || api, null, 2)}\nUwagi dla UI: ${api.notesForUi || '(brak)'}` : '',
-      (data && !api) ? `Warstwa danych/logiki JEST GOTOWA:\n${JSON.stringify(data, null, 2)}` : '',
+      `Przeczytaj plan: ${planPath}, sekcja "Frontend (warstwa frontend)" z "Pliki do zmiany". Zaimplementuj TYLKO komponenty i strony.`,
+      backend ? `BACKEND JEST GOTOWY — wolaj dokladnie te endpointy i ksztalty:\n${JSON.stringify(backend.endpoints || backend, null, 2)}\nUwagi dla frontendu: ${backend.notesForFrontend || '(brak)'}` : '',
+      (data && !backend) ? `Warstwa danych/logiki JEST GOTOWA:\n${JSON.stringify(data, null, 2)}` : '',
       REUSE_RULE,
       'WYMOG z AGENTS.md: responsywnosc mobilna — widok kartowy zamiast tabeli na ~360-390px, aplikacja ma dolna nawigacje mobilna. Reuzyj komponenty z src/components/ui.tsx i skopiuj wzorzec kartowy z istniejacych stron (hidden md:block + space-y-2 md:hidden). Ustaw mobileChecked=true tylko jesli faktycznie zadbales o wariant mobilny.',
       NEXT_RULE,
       'Zwroc: zmienione pliki, dotkniete sciezki/strony i krotki opis co powstalo.',
     ].filter(Boolean).join('\n'),
-    impl('impl:ui', 'Warstwa UI', UI_SCHEMA)
+    impl('impl:frontend', 'Warstwa frontend', FRONTEND_SCHEMA)
   )
 }
 
@@ -199,7 +213,7 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
     [
       `Napraw bledy lint/build powstale przy implementacji feature (plan: ${planPath}).`,
       `Bledy do naprawy:\n${JSON.stringify(verify.errors || [], null, 2)}`,
-      `Kontekst zaimplementowanych warstw:\n${JSON.stringify({ data, api, ui }, null, 2)}`,
+      `Kontekst zaimplementowanych warstw:\n${JSON.stringify({ data, backend, frontend }, null, 2)}`,
       NEXT_RULE,
       'Zmien tylko to, co konieczne, zeby `npm run lint` i `npm run build` przeszly. NIE zmieniaj zachowania feature ani zakresu z planu.',
     ].join('\n'),
@@ -207,4 +221,4 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
   )
 }
 
-return { planPath, layers: [...present], data, api, ui, verify }
+return { planPath, layers: [...present], data, backend, frontend, verify }
