@@ -666,7 +666,21 @@ export default function PortfolioPage() {
         </Card>
       )}
 
-      <Card title={`Transakcje (${allTx.length})`}>
+      <Card
+        title={`Transakcje (${allTx.length})`}
+        actions={
+          allTx.length > 0 && (
+            // Zwykłe <a>, nie <Link> — to plik do pobrania z API, nie strona.
+            <a
+              href="/api/transactions/export"
+              download
+              className="inline-flex items-center justify-center rounded-lg border border-border2 bg-surface2 px-2.5 py-1 text-[12px] font-medium text-ink transition-colors hover:border-muted"
+            >
+              Eksportuj CSV
+            </a>
+          )
+        }
+      >
         {allTx.length === 0 ? (
           <EmptyState title="Brak transakcji" />
         ) : (
